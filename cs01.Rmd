@@ -21,6 +21,7 @@ knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
 ### Load packages
 
 ```{r load-packages, message=FALSE}
+library(tidyverse)
 ```
 
 
@@ -30,13 +31,85 @@ knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
 ### Data Import
 
 ```{r}
-
+WB <- read_csv("data/Blood.csv")
+BR <- read_csv("data/Breath.csv")
+OF <- read_csv("data/OF.csv")
+combined <- bind_rows(WB, BR, OF)
+write.csv(combined, "combined_data.csv", row.names = FALSE)
+combined
 ```
 
 ### Data Wrangling
 
 ```{r}
 
+ggplot(WB, aes(x = time.from.start, y = THC, color = Group)) +
+  geom_line(size = 1) +
+  geom_point(size = 2) +
+  
+  # Customize labels and theme
+  labs(
+    title = "THC Levels Over Time for Occasional Users",
+    x = "time from start",
+    y = "THC Level (pg/mL)",
+    color = "User Group"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    legend.position = "top"
+  )
+
+```
+```{r ratios}
+df <- WB %>%
+  mutate(
+    CBN_to_THC = CBN / THC,
+    CBD_to_THC = CBD / THC,
+    `11-OH-THC_to_THC` = `11-OH-THC` / THC,
+    `THC-COOH_to_THC` = `THC-COOH` / THC,
+    `THC-COOH-Gluc_to_THC` = `THC-COOH-Gluc` / THC
+  )
+df_long <- df %>%
+  pivot_longer(cols = starts_with("CBN_to_THC"):starts_with("THC-COOH-Gluc_to_THC"),
+               names_to = "Compound_Ratio", values_to = "Ratio_Value")
+
+ggplot(df_long, aes(x = time.from.start, y = Ratio_Value, color = Group)) +
+  geom_line(size = 1) +
+  facet_wrap(~ Compound_Ratio, scales = "free_y") +
+  
+  labs(
+    title = "Compound Accumulation Ratios to THC Over Time",
+    x = "Time from Start (minutes)",
+    y = "Ratio to THC",
+    color = "User Group"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    legend.position = "top"
+  )
+```
+```{r metabolites over time}
+df_long <- WB %>%
+  pivot_longer(cols = c(THC, `11-OH-THC`, `THC-COOH`), names_to = "Compound", values_to = "Level")
+
+# Plot THC and metabolites over time for each matrix
+ggplot(df_long, aes(x = time.from.start, y = Level, color = Compound)) +
+  geom_point(size = 1) +
+  facet_wrap(~ Compound, scales = "free_y") +
+
+  labs(
+    title = "THC and Metabolite Levels Over Time Across Matrices",
+    x = "Time from Start (minutes)",
+    y = "Concentration (pg/mL)",
+    color = "FLUID TYPE"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    legend.position = "top"
+  )
 ```
 
 ## Analysis
