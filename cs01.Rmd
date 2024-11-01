@@ -90,25 +90,7 @@ ggplot(df_long, aes(x = time.from.start, y = Ratio_Value, color = Group)) +
   )
 ```
 ```{r metabolites over time}
-df_long <- WB %>%
-  pivot_longer(cols = c(THC, `11-OH-THC`, `THC-COOH`), names_to = "Compound", values_to = "Level")
 
-# Plot THC and metabolites over time for each matrix
-ggplot(df_long, aes(x = time.from.start, y = Level, color = Compound)) +
-  geom_point(size = 1) +
-  facet_wrap(~ Compound, scales = "free_y") +
-
-  labs(
-    title = "THC and Metabolite Levels Over Time Across Matrices",
-    x = "Time from Start (minutes)",
-    y = "Concentration (pg/mL)",
-    color = "FLUID TYPE"
-  ) +
-  theme_minimal() +
-  theme(
-    plot.title = element_text(hjust = 0.5),
-    legend.position = "top"
-  )
 ```
 
 ## Analysis
