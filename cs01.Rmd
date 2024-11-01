@@ -34,8 +34,7 @@ library(tidyverse)
 WB <- read_csv("data/Blood.csv")
 BR <- read_csv("data/Breath.csv")
 OF <- read_csv("data/OF.csv")
-combined <- bind_rows(WB, BR, OF)
-write.csv(combined, "combined_data.csv", row.names = FALSE)
+combined <- read_csv("data/cs01_combined.csv")
 combined
 ```
 
