@@ -8,6 +8,11 @@ output:
     code_folding: show
 ---
 
+```{r setup, include=FALSE}
+# control global Rmd chunk settings
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+```
+
 ### Load packages
 
 ```{r load-packages, message=FALSE}
@@ -23,16 +28,11 @@ The study’s dataset includes three matrices–blood, oral fluid, and breath–
 
 The analysis also seeks to address the legal challenges posed by varying state regulations. For example, states like Colorado utilize a “reasonable inference” approach, where blood concentrations above 5 ng/ml THC suggest impairment [^3]. These differing legal standards show the importance of identifying clear, evidence-based cutoff values for THC detection across different matrices. In this case study, we aim to determine which matrix is most effective for detecting recent THC use within a 3-hour window and to identify the optimal cutoff values for each matrix. This analysis will help us understand how different matrices perform in detecting THC levels over time and provide insights into their potential effectiveness in practical settings.
 
-
-```{r setup, include=FALSE}
-# control global Rmd chunk settings
-knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
-```
-
 ## Questions
 1. Which matrix–blood, oral fluid, or breath–is most effective for detecting recent THC use within a 3-hour window?
 2. What is the optimal cutoff within this 3-hour timeframe for detecting THC in each matrix?
 3. How does the treatment group (Placebo, 5.9% THC, or 13.4% THC) affect the detection of recent THC use in each matrix?
+
 
 ## The Data
 
@@ -94,41 +94,70 @@ write_csv(combined, "combined_data.csv")
 
 ```{r}
 
-ggplot(combined, aes(x = time_from_start, y = thc, color = group)) +
-  geom_line(size = 1) +
-  geom_point(size = 2) +
-  
-  # Customize labels and theme
-  labs(
-    title = "THC Levels Over Time for Occasional Users",
-    x = "time from start",
-    y = "THC Level (pg/mL)",
-    color = "User Group"
-  ) +
-  theme_minimal() +
-  theme(
-    plot.title = element_text(hjust = 0.5),
-    legend.position = "top"
-  )
+combined_long <- combined |> 
+  select(1:5,time_from_start,everything()) |>
+  pivot_longer(7:15)
+
+invisible(ggplot(combined_long, aes(x = value)) + 
+  geom_histogram() +
+  facet_wrap(~name))
+
+invisible(combined_long |>
+  mutate(group_compound = paste0(fluid_type, ": ", name)) |>
+  ggplot(aes(x = value)) + 
+  geom_histogram() + 
+  facet_wrap(~group_compound, scales = "free"))
+
+invisible(combined_long |> 
+  filter(name == "thc") |>
+  ggplot(aes(x = group, y = value)) + 
+  geom_boxplot() +
+  facet_wrap(~fluid_type, scales = "free"))
+
+invisible(combined_long |> 
+  filter(name == "thc") |>
+  ggplot(aes(x = treatment, y = value)) + 
+  geom_boxplot() +
+  facet_wrap(~fluid_type, scales = "free"))
+
+invisible(combined_long |> 
+  filter(name == "thc", (timepoint == "0-30 min" | timepoint == "0-40 min")) |>
+  ggplot(aes(x = treatment, y = value)) + 
+  geom_boxplot() +
+  facet_wrap(~fluid_type, scales = "free"))
+
+plot_scatter_time <- function(matrix) {
+  combined_long |> 
+      filter(!is.na(time_from_start), fluid_type==matrix) |>
+      ggplot(aes(x=time_from_start, y=value, color=group)) + 
+        geom_point() +
+        facet_wrap(~name, scales="free") +
+        scale_color_manual(values=c("#19831C", "#A27FC9")) +
+        theme_classic() +
+        labs(title=paste("Compound Levels Across Time for", matrix),
+             x="Time From Start (min)",
+             y="Concentration (pg/mL)") +
+        theme(legend.position="bottom",
+              legend.title=element_blank(),
+              strip.background=element_blank(),
+              plot.title.position="plot") 
+}
+
+plot_scatter_time(matrix = "WB")
+plot_scatter_time(matrix = "OF")
+plot_scatter_time(matrix = "BR")
 
 ```
 
-
-```{r metabolites over time}
-
-combined_long <- combined |>
-  pivot_longer(cols = c(thc, thcoh, thccooh), names_to = "compound", values_to = "level")
-
-# Plot THC and metabolites over time for each matrix
-ggplot(combined_long, aes(x = time_from_start, y = level, color = compound)) +
-  geom_point(size = 1) +
-  facet_wrap(~ compound, scales = "free_y") +
+```{r ratios}
+ggplot(combined, aes(x = time_from_start, y = thc)) +
+  geom_point(size = 1, color = "lightgreen") +
+  facet_wrap(~ fluid_type, scales = "free_y") +
 
   labs(
-    title = "THC and Metabolite Levels Over Time Across Matrices",
+    title = "THC Levels across Time in each Fluid Type",
     x = "Time from Start (minutes)",
     y = "Concentration (pg/mL)",
-    color = "Compound"
   ) +
   theme_minimal() +
   theme(
@@ -136,35 +165,99 @@ ggplot(combined_long, aes(x = time_from_start, y = level, color = compound)) +
     legend.position = "top"
   )
 ```
+
+
+
+```{r WB all dosages}
+ggplot(combined, aes(x = timepoint, y = thc, color = treatment, group = treatment)) +
+  geom_line() +
+  geom_point(position = position_jitter(width = 0.2), size = 2) +  # Add jitter for better visibility
+  facet_wrap(~ fluid_type, scales = "free_y") +  # Create separate plots for each fluid type
+  labs(
+    title = "THC Levels Across Fluid Types Over Time",
+    x = "Time Interval",
+    y = "THC Level",
+    color = "Dosage"
+  ) +
+  theme_minimal(base_size = 14) +  # Increase base font size for readability
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    axis.text.x = element_text(angle = 45, hjust = 1),  # Rotate x-axis labels for readability
+    legend.position = "top"
+  )
+```
+
+
+```{r WB of the first 3 hours}
+ggplot(combined %>% filter(fluid_type == "WB" & time_from_start >= 0 & time_from_start <= 180), aes(x = time_from_start, y = thc, color = treatment, group = treatment)) +
+  geom_line() +
+  geom_point(position = position_jitter(width = 0.2), size = 2) +  # Add jitter for better visibility
+  labs(
+    title = "THC Levels Across Water Blood Over Time",
+    x = "Time Interval",
+    y = "THC Level",
+    color = "Dosage"
+  ) +
+  theme_minimal(base_size = 14) +  # Increase base font size for better readability
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    axis.text.x = element_text(angle = 45, hjust = 1),  # Rotate x-axis labels
+    legend.position = "bottom"
+  )
+```
+
+
+```{r}
+ggplot(combined %>% filter(fluid_type == "WB" & time_from_start >= 0 & time_from_start <= 60), aes(x = time_from_start, y = thc, color = treatment, group = treatment)) +
+  geom_line() +
+  geom_point(position = position_jitter(width = 0.2), size = 2) +  # Add jitter for better visibility
+  labs(
+    title = "THC Levels Across Water Blood Over Time",
+    x = "Time Interval",
+    y = "THC Level",
+    color = "Dosage"
+  ) +
+  theme_minimal(base_size = 14) +  # Increase base font size for better readability
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    axis.text.x = element_text(angle = 45, hjust = 1),  # Rotate x-axis labels
+    legend.position = "bottom"
+  )
+```
+
+
+```{r}
+ggplot(combined %>% filter(fluid_type == "WB" & time_from_start >= 0 & time_from_start <= 60), aes(x = time_from_start, y = thc, color = treatment, group = treatment)) +
+  geom_line() +
+  geom_point(position = position_jitter(width = 0.2), size = 2) +
+  facet_wrap(~treatment) +
+  labs(
+    title = "THC Levels Across Water Blood Over Time",
+    x = "Time Interval",
+    y = "THC Level",
+    color = "Dosage"
+  ) +
+  theme_minimal(base_size = 14) +  # Increase base font size for better readability
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    axis.text.x = element_text(angle = 45, hjust = 1),  # Rotate x-axis labels
+    legend.position = "bottom"
+  )
+```
+
+
+
+
 
 ## Analysis
 
-```{r}
-ggplot(combined, aes(x=fluid_type, y=thc, fill=treatment)) +
-  geom_boxplot() + 
-  labs(title = "THC Levels Across Fluid Types by Dosage",
-       x = "Fluid Type",
-       y = "THC Level") +
-  scale_fill_brewer(palette = "Set2") +
-  theme_minimal()
-```
 
-```{r}
-
-ggplot(combined, aes(x = time_from_start, y = thc, color = fluid_type)) +
-  geom_line() +
-  labs(title = "THC Levels Over Time by Dosage",
-       x = "Time from Start (minutes)",
-       y = "THC Level") +
-  facet_wrap(~ treatment, scales = "free_y") + # Facet by dosage with separate y-scales
-  theme_minimal() +
-  theme(legend.position = "bottom")
-```
 
 
 ## Results & Discussion 
 
 ## Conclusion
+
 
 
 [^1]: Pearson, J., et al. (2020). *Legal implications of THC per se limits.* Journal of Accident Analysis & Prevention. Retrieved from [Taylor & Francis Online](https://www.tandfonline.com/doi/full/10.1080/15389588.2020.1851685). 
