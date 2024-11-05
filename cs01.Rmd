@@ -1,6 +1,10 @@
 ---
 title: "CS01: Biomarkers of Recent Use"
+<<<<<<< HEAD
 author: "Yuancheng Cao, Vinuthna Hasthi, Darwin Yu, Nina Hong"
+=======
+author: "Vinuthna Hasthi, Nina Hong, Yuancheng Cao, Darwin Yu"
+>>>>>>> origin/main
 output: 
   html_document:
     toc: true
@@ -10,7 +14,7 @@ output:
 
 ```{r setup, include=FALSE}
 # control global Rmd chunk settings
-knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+
 ```
 
 ### Load packages
@@ -186,8 +190,11 @@ ggplot(combined, aes(x = timepoint, y = thc, color = treatment, group = treatmen
     legend.position = "top"
   )
 ```
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> origin/main
 ```{r WB of the first 3 hours}
 ggplot(combined %>% filter(fluid_type == "WB" & time_from_start >= 0 & time_from_start <= 180), aes(x = time_from_start, y = thc, color = treatment, group = treatment)) +
   geom_line() +
@@ -205,8 +212,11 @@ ggplot(combined %>% filter(fluid_type == "WB" & time_from_start >= 0 & time_from
     legend.position = "bottom"
   )
 ```
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> origin/main
 ```{r}
 ggplot(combined %>% filter(fluid_type == "WB" & time_from_start >= 0 & time_from_start <= 60), aes(x = time_from_start, y = thc, color = treatment, group = treatment)) +
   geom_line() +
@@ -224,8 +234,11 @@ ggplot(combined %>% filter(fluid_type == "WB" & time_from_start >= 0 & time_from
     legend.position = "bottom"
   )
 ```
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> origin/main
 ```{r}
 ggplot(combined %>% filter(fluid_type == "WB" & time_from_start >= 0 & time_from_start <= 60), aes(x = time_from_start, y = thc, color = treatment, group = treatment)) +
   geom_line() +
@@ -247,6 +260,11 @@ ggplot(combined %>% filter(fluid_type == "WB" & time_from_start >= 0 & time_from
 
 
 
+<<<<<<< HEAD
+=======
+```
+
+>>>>>>> origin/main
 
 
 ## Analysis
