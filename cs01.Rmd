@@ -1,6 +1,6 @@
 ---
 title: "CS01: Biomarkers of Recent Use"
-author: "Unknown"
+author: "Yuancheng Cao, Vinuthna Hasthi, Darwin Yu, Nina Hong"
 output: 
   html_document:
     toc: true
@@ -8,7 +8,21 @@ output:
     code_folding: show
 ---
 
+### Load packages
+
+```{r load-packages, message=FALSE}
+library(tidyverse)
+library(ggplot2)
+```
+
 ## Introduction
+
+In this case study, we seek to determine the best biomarkers of recent THC use within a 3-hour period by evaluating compounds across three matrices: blood, oral fluid, and breath. Additionally, we aim to determine the optimal THC concentration cutoffs for each matrix within this timeframe and to examine how treatment groups may influence THC levels. This analysis is important given the legal implications of THC detection in impaired driving cases. Nineteen states have implemented per se or zero-tolerance laws for THC, with per se limits varying between 1-5 ng/mL THC in blood [^1]. These limits suggest significant regulatory interest in identifying reliable biological markers of recent cannabis use, particularly in roadside testing contexts.
+
+The study’s dataset includes three matrices–blood, oral fluid, and breath–with a total of 573 participants across them. Blood and oral fluid matrices allow detection of multiple THC-related compounds (8 in blood, 7 in oral fluid), while breath analysis focuses solely on one compound. Blood and oral fluid matrices have previously demonstrated relatively stable THC levels over time, providing a basis for exploring how they reflect THC concentrations within a 3-hour window [^2]. Breath testing, however, remains a newer field of investigation, and its reliability for THC detection within a short timeframe is still under review. Identifying the optimal biological matrix for THC detection in recent use is important for law enforcement to establish reliable, science-based standards for roadside impairment testing.
+
+The analysis also seeks to address the legal challenges posed by varying state regulations. For example, states like Colorado utilize a “reasonable inference” approach, where blood concentrations above 5 ng/ml THC suggest impairment [^3]. These differing legal standards show the importance of identifying clear, evidence-based cutoff values for THC detection across different matrices. In this case study, we aim to determine which matrix is most effective for detecting recent THC use within a 3-hour window and to identify the optimal cutoff values for each matrix. This analysis will help us understand how different matrices perform in detecting THC levels over time and provide insights into their potential effectiveness in practical settings.
+
 
 ```{r setup, include=FALSE}
 # control global Rmd chunk settings
@@ -16,14 +30,9 @@ knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
 ```
 
 ## Questions
-
-
-### Load packages
-
-```{r load-packages, message=FALSE}
-library(tidyverse)
-```
-
+1. Which matrix–blood, oral fluid, or breath–is most effective for detecting recent THC use within a 3-hour window?
+2. What is the optimal cutoff within this 3-hour timeframe for detecting THC in each matrix?
+3. How does the treatment group (Placebo, 5.9% THC, or 13.4% THC) affect the detection of recent THC use in each matrix?
 
 ## The Data
 
@@ -34,11 +43,6 @@ library(tidyverse)
 WB <- read_csv("data/Blood.csv")
 BR <- read_csv("data/Breath.csv")
 OF <- read_csv("data/OF.csv")
-<<<<<<< HEAD
-combined <- read_csv("data/cs01_combined.csv")
-combined
-=======
->>>>>>> refs/remotes/origin/main
 ```
 
 ### Data Wrangling
@@ -109,40 +113,9 @@ ggplot(combined, aes(x = time_from_start, y = thc, color = group)) +
 
 ```
 
-```{r ratios}#
-combined <- WB |>
-  mutate(
-    CBN_to_THC = cbn / thc,
-    CBD_to_THC = cbd / thc,
-    `11-OH-THC_to_THC` = thcoh / thc,
-    `THC-COOH_to_THC` = thccooh / thc,
-    `THC-COOH-Gluc_to_THC` = thccooh / thc
-  )
-df_long <- combined |>
-  pivot_longer(cols = starts_with("CBN_to_THC"):starts_with("THC-COOH-Gluc_to_THC"),
-               names_to = "compound_ratio", values_to = "ratio_value")
-
-ggplot(df_long, aes(x = time_from_start, y = ratio_value, color = group)) +
-  geom_line(size = 1) +
-  facet_wrap(~ compound_ratio, scales = "free_y") +
-  
-  labs(
-    title = "Compound Accumulation Ratios to THC Over Time",
-    x = "Time from Start (minutes)",
-    y = "Ratio to THC",
-    color = "User Group"
-  ) +
-  theme_minimal() +
-  theme(
-    plot.title = element_text(hjust = 0.5),
-    legend.position = "top"
-  )
-```
 
 ```{r metabolites over time}
-<<<<<<< HEAD
 
-=======
 combined_long <- combined |>
   pivot_longer(cols = c(thc, thcoh, thccooh), names_to = "compound", values_to = "level")
 
@@ -162,16 +135,40 @@ ggplot(combined_long, aes(x = time_from_start, y = level, color = compound)) +
     plot.title = element_text(hjust = 0.5),
     legend.position = "top"
   )
->>>>>>> refs/remotes/origin/main
 ```
 
 ## Analysis
 
 ```{r}
+ggplot(combined, aes(x=fluid_type, y=thc, fill=treatment)) +
+  geom_boxplot() + 
+  labs(title = "THC Levels Across Fluid Types by Dosage",
+       x = "Fluid Type",
+       y = "THC Level") +
+  scale_fill_brewer(palette = "Set2") +
+  theme_minimal()
+```
 
+```{r}
+
+ggplot(combined, aes(x = time_from_start, y = thc, color = fluid_type)) +
+  geom_line() +
+  labs(title = "THC Levels Over Time by Dosage",
+       x = "Time from Start (minutes)",
+       y = "THC Level") +
+  facet_wrap(~ treatment, scales = "free_y") + # Facet by dosage with separate y-scales
+  theme_minimal() +
+  theme(legend.position = "bottom")
 ```
 
 
 ## Results & Discussion 
 
 ## Conclusion
+
+
+[^1]: Pearson, J., et al. (2020). *Legal implications of THC per se limits.* Journal of Accident Analysis & Prevention. Retrieved from [Taylor & Francis Online](https://www.tandfonline.com/doi/full/10.1080/15389588.2020.1851685). 
+
+[^2]: Huestis, M. A. (2007). *Human cannabinoid pharmacokinetics.* Chemistry & Biodiversity, 4(8), 1770-1804. [https://pmc.ncbi.nlm.nih.gov/articles/PMC2689518/). 
+
+[^3]: Compton, R. (2017). *Marijuana-impaired driving: A report to Congress.* National Highway Traffic Safety Administration. Retrieved from [NGTSA](https://www.nhtsa.gov/sites/nhtsa.gov/files/documents/812440-marijuana-impaired-driving-report-to-congress.pdf).
