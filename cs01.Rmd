@@ -1,10 +1,6 @@
 ---
 title: "CS01: Biomarkers of Recent Use"
-<<<<<<< HEAD
 author: "Yuancheng Cao, Vinuthna Hasthi, Darwin Yu, Nina Hong"
-=======
-author: "Vinuthna Hasthi, Nina Hong, Yuancheng Cao, Darwin Yu"
->>>>>>> origin/main
 output: 
   html_document:
     toc: true
@@ -14,7 +10,7 @@ output:
 
 ```{r setup, include=FALSE}
 # control global Rmd chunk settings
-
+knitr::opts_chunk$set(warning=FALSE)
 ```
 
 ### Load packages
@@ -40,10 +36,13 @@ The analysis also seeks to address the legal challenges posed by varying state r
 
 ## The Data
 
+The data set that we will be using for our case study is provided to us by Professor Ellis in our data/ folder. The data provided will be in the form of csv files.
 
 ### Data Import
 
-```{r}
+In order to begin our analysis, we imported our raw data from our data/ folder.
+
+```{r, message=FALSE}
 WB <- read_csv("data/Blood.csv")
 BR <- read_csv("data/Breath.csv")
 OF <- read_csv("data/OF.csv")
@@ -51,7 +50,11 @@ OF <- read_csv("data/OF.csv")
 
 ### Data Wrangling
 
-```{r}
+Now that we have our data properly imported, we need to wrangle our data in R before starting our analysis. 
+
+To begin our data wrangling, we took the imported data, in the form of a table, and modified the columns and transformed its data to reorganize it for better structure. There are three datasets for each fluid type, blood, oral, and breath, we reformatted the entries in the `Treatment` column to make them easier to read. We also turned all the columns into snake case. For all the compounds in each dataset, we renamed the column names.
+
+```{r, message=FALSE}
 WB <- WB |> 
   mutate(Treatment = fct_recode(Treatment, 
                                 "5.9% THC (low dose)" = "5.90%",
@@ -67,7 +70,9 @@ WB <- WB |>
                                time_from_start > 61 & time_from_start <= 120 ~ "0-120 min",
                                time_from_start > 121 & time_from_start <= 180 ~ "0-180 min",
                                time_from_start > 180 ~ "181+ min"))
+```
 
+```{r, message=FALSE}
 OF <- OF |> 
   mutate(Treatment = fct_recode(Treatment, 
                                 "5.9% THC (low dose)" = "5.90%",
@@ -82,7 +87,9 @@ OF <- OF |>
                                time_from_start > 61 & time_from_start <= 120 ~ "0-120 min",
                                time_from_start > 121 & time_from_start <= 180 ~ "0-180 min",
                                time_from_start > 180 ~ "181+ min"))
+```
 
+```{r, message=FALSE}
 BR <- BR |> 
   mutate(Treatment = fct_recode(Treatment, 
                                 "5.9% THC (low dose)" = "5.90%",
@@ -96,12 +103,16 @@ BR <- BR |>
                                time_from_start > 61 & time_from_start <= 120 ~ "0-120 min",
                                time_from_start > 121 & time_from_start <= 180 ~ "0-180 min",
                                time_from_start > 180 ~ "181+ min"))
+```
 
+```{r, message=FALSE}
 combined <- bind_rows(list(WB, OF, BR))
 write_csv(combined, "combined_data.csv")
 ```
 
-```{r}
+## Analysis
+
+```{r compounds, message=FALSE}
 combined_long <- combined |> 
   select(1:5,time_from_start,everything()) |>
   pivot_longer(7:15)
@@ -157,67 +168,8 @@ plot_scatter_time(matrix = "BR")
 ```
 
 
-```{r}
-<<<<<<< HEAD
+```{r thc across fluids, message=FALSE}
 
-combined_long <- combined |> 
-  select(1:5,time_from_start,everything()) |>
-  pivot_longer(7:15)
-
-invisible(ggplot(combined_long, aes(x = value)) + 
-  geom_histogram() +
-  facet_wrap(~name))
-
-invisible(combined_long |>
-  mutate(group_compound = paste0(fluid_type, ": ", name)) |>
-  ggplot(aes(x = value)) + 
-  geom_histogram() + 
-  facet_wrap(~group_compound, scales = "free"))
-
-invisible(combined_long |> 
-  filter(name == "thc") |>
-  ggplot(aes(x = group, y = value)) + 
-  geom_boxplot() +
-  facet_wrap(~fluid_type, scales = "free"))
-
-invisible(combined_long |> 
-  filter(name == "thc") |>
-  ggplot(aes(x = treatment, y = value)) + 
-  geom_boxplot() +
-  facet_wrap(~fluid_type, scales = "free"))
-
-invisible(combined_long |> 
-  filter(name == "thc", (timepoint == "0-30 min" | timepoint == "0-40 min")) |>
-  ggplot(aes(x = treatment, y = value)) + 
-  geom_boxplot() +
-  facet_wrap(~fluid_type, scales = "free"))
-
-plot_scatter_time <- function(matrix) {
-  combined_long |> 
-      filter(!is.na(time_from_start), fluid_type==matrix) |>
-      ggplot(aes(x=time_from_start, y=value, color=group)) + 
-        geom_point() +
-        facet_wrap(~name, scales="free") +
-        scale_color_manual(values=c("#19831C", "#A27FC9")) +
-        theme_classic() +
-        labs(title=paste("Compound Levels Across Time for", matrix),
-             x="Time From Start (min)",
-             y="Concentration (pg/mL)") +
-        theme(legend.position="bottom",
-              legend.title=element_blank(),
-              strip.background=element_blank(),
-              plot.title.position="plot") 
-}
-
-plot_scatter_time(matrix = "WB")
-plot_scatter_time(matrix = "OF")
-plot_scatter_time(matrix = "BR")
-
-```
-
-```{r ratios}
-=======
->>>>>>> ff15d15ccadd72846c98eb72dbee8f1dd4c289ca
 ggplot(combined, aes(x = time_from_start, y = thc)) +
   geom_point(size = 1, color = "lightgreen") +
   facet_wrap(~ fluid_type, scales = "free_y") +
@@ -235,9 +187,7 @@ ggplot(combined, aes(x = time_from_start, y = thc)) +
 ```
 
 
-
-<<<<<<< HEAD
-```{r WB all dosages}
+```{r WB all dosages, message=FALSE}
 ggplot(combined, aes(x = timepoint, y = thc, color = treatment, group = treatment)) +
   geom_line() +
   geom_point(position = position_jitter(width = 0.2), size = 2) +  # Add jitter for better visibility
@@ -255,12 +205,9 @@ ggplot(combined, aes(x = timepoint, y = thc, color = treatment, group = treatmen
     legend.position = "top"
   )
 ```
-<<<<<<< HEAD
 
 
-=======
->>>>>>> origin/main
-```{r WB of the first 3 hours}
+```{r WB of the first 3 hours, message=FALSE}
 ggplot(combined %>% filter(fluid_type == "WB" & time_from_start >= 0 & time_from_start <= 180), aes(x = time_from_start, y = thc, color = treatment, group = treatment)) +
   geom_line() +
   geom_point(position = position_jitter(width = 0.2), size = 2) +  # Add jitter for better visibility
@@ -277,12 +224,8 @@ ggplot(combined %>% filter(fluid_type == "WB" & time_from_start >= 0 & time_from
     legend.position = "bottom"
   )
 ```
-<<<<<<< HEAD
 
-
-=======
->>>>>>> origin/main
-```{r}
+```{r thc in wb, message=FALSE}
 ggplot(combined %>% filter(fluid_type == "WB" & time_from_start >= 0 & time_from_start <= 60), aes(x = time_from_start, y = thc, color = treatment, group = treatment)) +
   geom_line() +
   geom_point(position = position_jitter(width = 0.2), size = 2) +  # Add jitter for better visibility
@@ -299,12 +242,8 @@ ggplot(combined %>% filter(fluid_type == "WB" & time_from_start >= 0 & time_from
     legend.position = "bottom"
   )
 ```
-<<<<<<< HEAD
 
-
-=======
->>>>>>> origin/main
-```{r}
+```{r thc in wb 2, message=FALSE}
 ggplot(combined %>% filter(fluid_type == "WB" & time_from_start >= 0 & time_from_start <= 60), aes(x = time_from_start, y = thc, color = treatment, group = treatment)) +
   geom_line() +
   geom_point(position = position_jitter(width = 0.2), size = 2) +
@@ -322,19 +261,6 @@ ggplot(combined %>% filter(fluid_type == "WB" & time_from_start >= 0 & time_from
     legend.position = "bottom"
   )
 ```
-
-
-
-<<<<<<< HEAD
-=======
-```
-
->>>>>>> origin/main
-
-
-=======
->>>>>>> ff15d15ccadd72846c98eb72dbee8f1dd4c289ca
-## Analysis
 
 
 
