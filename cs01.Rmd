@@ -63,7 +63,9 @@ WB <- WB |>
          thccooh_gluc = thc_cooh_gluc,
          thcv = thc_v) |>
   mutate(timepoint = case_when(time_from_start < 0 ~ "pre-smoking",
-                               time_from_start > 0 & time_from_start <= 180 ~ "0-180 min",
+                               time_from_start > 0 & time_from_start <= 60 ~ "0-60 min",
+                               time_from_start > 61 & time_from_start <= 120 ~ "0-120 min",
+                               time_from_start > 121 & time_from_start <= 180 ~ "0-180 min",
                                time_from_start > 180 ~ "181+ min"))
 
 OF <- OF |> 
@@ -76,7 +78,9 @@ OF <- OF |>
          thcv = thc_v,
          fluid_type = fluid) |>
   mutate(timepoint = case_when(time_from_start < 0 ~ "pre-smoking",
-                               time_from_start > 0 & time_from_start <= 180 ~ "0-180 min",
+                               time_from_start > 0 & time_from_start <= 60 ~ "0-60 min",
+                               time_from_start > 61 & time_from_start <= 120 ~ "0-120 min",
+                               time_from_start > 121 & time_from_start <= 180 ~ "0-180 min",
                                time_from_start > 180 ~ "181+ min"))
 
 BR <- BR |> 
@@ -88,15 +92,73 @@ BR <- BR |>
   rename(thc = thc_pg_pad,
          fluid_type = fluid) |>
   mutate(timepoint = case_when(time_from_start < 0 ~ "pre-smoking",
-                               time_from_start > 0 & time_from_start <= 180 ~ "0-180 min",
+                               time_from_start > 0 & time_from_start <= 60 ~ "0-60 min",
+                               time_from_start > 61 & time_from_start <= 120 ~ "0-120 min",
+                               time_from_start > 121 & time_from_start <= 180 ~ "0-180 min",
                                time_from_start > 180 ~ "181+ min"))
 
 combined <- bind_rows(list(WB, OF, BR))
 write_csv(combined, "combined_data.csv")
 ```
 
+```{r}
+combined_long <- combined |> 
+  select(1:5,time_from_start,everything()) |>
+  pivot_longer(7:15)
+
+invisible(ggplot(combined_long, aes(x = value)) + 
+  geom_histogram() +
+  facet_wrap(~name))
+
+invisible(combined_long |>
+  mutate(group_compound = paste0(fluid_type, ": ", name)) |>
+  ggplot(aes(x = value)) + 
+  geom_histogram() + 
+  facet_wrap(~group_compound, scales = "free"))
+
+invisible(combined_long |> 
+  filter(name == "thc") |>
+  ggplot(aes(x = group, y = value)) + 
+  geom_boxplot() +
+  facet_wrap(~fluid_type, scales = "free"))
+
+invisible(combined_long |> 
+  filter(name == "thc") |>
+  ggplot(aes(x = treatment, y = value)) + 
+  geom_boxplot() +
+  facet_wrap(~fluid_type, scales = "free"))
+
+invisible(combined_long |> 
+  filter(name == "thc", (timepoint == "0-30 min" | timepoint == "0-40 min")) |>
+  ggplot(aes(x = treatment, y = value)) + 
+  geom_boxplot() +
+  facet_wrap(~fluid_type, scales = "free"))
+
+plot_scatter_time <- function(matrix) {
+  combined_long |> 
+      filter(!is.na(time_from_start), fluid_type==matrix) |>
+      ggplot(aes(x=time_from_start, y=value, color=group)) + 
+        geom_point() +
+        facet_wrap(~name, scales="free") +
+        scale_color_manual(values=c("#19831C", "#A27FC9")) +
+        theme_classic() +
+        labs(title=paste("Compound Levels Across Time for", matrix),
+             x="Time From Start (min)",
+             y="Concentration (pg/mL)") +
+        theme(legend.position="bottom",
+              legend.title=element_blank(),
+              strip.background=element_blank(),
+              plot.title.position="plot") 
+}
+
+plot_scatter_time(matrix = "WB")
+plot_scatter_time(matrix = "OF")
+plot_scatter_time(matrix = "BR")
+```
+
 
 ```{r}
+<<<<<<< HEAD
 
 combined_long <- combined |> 
   select(1:5,time_from_start,everything()) |>
@@ -154,6 +216,8 @@ plot_scatter_time(matrix = "BR")
 ```
 
 ```{r ratios}
+=======
+>>>>>>> ff15d15ccadd72846c98eb72dbee8f1dd4c289ca
 ggplot(combined, aes(x = time_from_start, y = thc)) +
   geom_point(size = 1, color = "lightgreen") +
   facet_wrap(~ fluid_type, scales = "free_y") +
@@ -172,6 +236,7 @@ ggplot(combined, aes(x = time_from_start, y = thc)) +
 
 
 
+<<<<<<< HEAD
 ```{r WB all dosages}
 ggplot(combined, aes(x = timepoint, y = thc, color = treatment, group = treatment)) +
   geom_line() +
@@ -267,6 +332,8 @@ ggplot(combined %>% filter(fluid_type == "WB" & time_from_start >= 0 & time_from
 >>>>>>> origin/main
 
 
+=======
+>>>>>>> ff15d15ccadd72846c98eb72dbee8f1dd4c289ca
 ## Analysis
 
 
