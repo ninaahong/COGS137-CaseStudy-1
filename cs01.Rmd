@@ -1,10 +1,6 @@
 ---
 title: "CS01: Biomarkers of Recent Use"
-<<<<<<< HEAD
 author: "Yuancheng Cao, Vinuthna Hasthi, Darwin Yu, Nina Hong"
-=======
-author: "Vinuthna Hasthi, Nina Hong, Yuancheng Cao, Darwin Yu"
->>>>>>> origin/main
 output: 
   html_document:
     toc: true
@@ -14,126 +10,156 @@ output:
 
 ```{r setup, include=FALSE}
 # control global Rmd chunk settings
-
+knitr::opts_chunk$set(warning=FALSE)
 ```
 
 ### Load packages
 
 ```{r load-packages, message=FALSE}
 library(tidyverse)
+library(patchwork)
+library(dplyr)
+library(tidyr)
 library(ggplot2)
 ```
 
 ## Introduction
 
-In this case study, we seek to determine the best biomarkers of recent THC use within a 3-hour period by evaluating compounds across three matrices: blood, oral fluid, and breath. Additionally, we aim to determine the optimal THC concentration cutoffs for each matrix within this timeframe and to examine how treatment groups may influence THC levels. This analysis is important given the legal implications of THC detection in impaired driving cases. Nineteen states have implemented per se or zero-tolerance laws for THC, with per se limits varying between 1-5 ng/mL THC in blood [^1]. These limits suggest significant regulatory interest in identifying reliable biological markers of recent cannabis use, particularly in roadside testing contexts.
+In this case study, we seek to determine the best bio-markers of recent THC use within a 3-hour period by evaluating compounds across three matrices: blood, oral fluid, and breath. Additionally, we aim to determine the optimal THC concentration cutoffs for each matrix within this time frame and to examine how treatment groups may influence THC levels. This analysis is important given the legal implications of THC detection in impaired driving cases. Nineteen states have implemented per se or zero-tolerance laws for THC, with per se limits varying between 1-5 ng/mL THC in blood [^1]. These limits suggest significant regulatory interest in identifying reliable biological markers of recent cannabis use, particularly in roadside testing contexts.
 
-The study’s dataset includes three matrices–blood, oral fluid, and breath–with a total of 573 participants across them. Blood and oral fluid matrices allow detection of multiple THC-related compounds (8 in blood, 7 in oral fluid), while breath analysis focuses solely on one compound. Blood and oral fluid matrices have previously demonstrated relatively stable THC levels over time, providing a basis for exploring how they reflect THC concentrations within a 3-hour window [^2]. Breath testing, however, remains a newer field of investigation, and its reliability for THC detection within a short timeframe is still under review. Identifying the optimal biological matrix for THC detection in recent use is important for law enforcement to establish reliable, science-based standards for roadside impairment testing.
+The study’s data set includes three matrices–blood, oral fluid, and breath–with a total of 573 participants across them. Blood and oral fluid matrices allow detection of multiple THC-related compounds (8 in blood, 7 in oral fluid), while breath analysis focuses solely on one compound. Blood and oral fluid matrices have previously demonstrated relatively stable THC levels over time, providing a basis for exploring how they reflect THC concentrations within a 3-hour window [^2]. Breath testing, however, remains a newer field of investigation, and its reliability for THC detection within a short time frame is still under review. Identifying the optimal biological matrix for THC detection in recent use is important for law enforcement to establish reliable, science-based standards for roadside impairment testing.
 
 The analysis also seeks to address the legal challenges posed by varying state regulations. For example, states like Colorado utilize a “reasonable inference” approach, where blood concentrations above 5 ng/ml THC suggest impairment [^3]. These differing legal standards show the importance of identifying clear, evidence-based cutoff values for THC detection across different matrices. In this case study, we aim to determine which matrix is most effective for detecting recent THC use within a 3-hour window and to identify the optimal cutoff values for each matrix. This analysis will help us understand how different matrices perform in detecting THC levels over time and provide insights into their potential effectiveness in practical settings.
 
 ## Questions
+
 1. Which matrix–blood, oral fluid, or breath–is most effective for detecting recent THC use within a 3-hour window?
-2. What is the optimal cutoff within this 3-hour timeframe for detecting THC in each matrix?
+2. What is the optimal cutoff within this 3-hour time frame for detecting THC in each matrix?
 3. How does the treatment group (Placebo, 5.9% THC, or 13.4% THC) affect the detection of recent THC use in each matrix?
 
 
 ## The Data
 
+The data set that we will be using for our case study is provided to us by Professor Ellis in our `data/` folder. The data provided will be in the form of csv files.
 
 ### Data Import
 
-```{r}
+In order to begin our analysis, we imported our raw data of whole blood, breath, and oral fluids from our data/ folder.
+
+```{r, message=FALSE}
+# Import data for Whole Blood
 WB <- read_csv("data/Blood.csv")
+# Import data for Breath
 BR <- read_csv("data/Breath.csv")
+# Import data for Oral Fluid
 OF <- read_csv("data/OF.csv")
 ```
 
+In the Whole Blood file, we have 14 columns/variables: `ID`, `Treatment`, `Group`, `FLUID TYPE`, `Timepoint`, `CBN`, `CBD`, `THC`, `11-OH-THC`, `THC-COOH`, `THC-COOH-Gluc`, `CBG`, `THC-V`, and `time.from.start`.
+
+In the Breath file, we have 7 columns/variables: `ID`, `Treatment`, `Group`, `Fluid`, `Timepoint`, `THC (pg/pad)`, and `time.from.start`.
+
+In the Oral Fluid file, we have 13 columns/variables: `ID`, `Treatment`, `Group`, `Fluid`, `Timepoint`, `CBN`, `CBD`, `THC`, `11-OH-THC`, `CBG`, `THC-V`, `THCA-A`, and `time.from.start`.
+
 ### Data Wrangling
 
-```{r}
+Now that we have our data properly imported, we need to wrangle our data in R before starting our analysis. 
+
+There are three data set tables for each fluid type, blood, oral, and breath, in which we reformatted the entries in the `Treatment` column for better readability. We re-leveled the entries, so `Placebo` is the first level and acts like the baseline for our analyses. We also converted all column names to snake case to simplify future coding. We renamed the columns for all compounds in each data set to ensure clear differentiation. Note that not every fluid type contains all of the compounds. To create time intervals, we turned the `time_from_start`column into hour intervals and stored it into a new column, `timepoint`.
+
+We start with the Whole Blood table.
+
+```{r, message=FALSE}
 WB <- WB |> 
+  # Re-code 'Treatment' variable for better readability
   mutate(Treatment = fct_recode(Treatment, 
-                                "5.9% THC (low dose)" = "5.90%",
-                                "13.4% THC (high dose)" = "13.40%"),
+                                "5.9% THC (low dose)" = "5.90%", # Re-code "5.90%" to "5.9% THC (low dose)"
+                                "13.4% THC (high dose)" = "13.40%"), # Re-code "13.40%" to "13.4% THC (high dose)"
+         # Re-level the 'Treatment' factor so that "Placebo" is the reference category
          Treatment = fct_relevel(Treatment, "Placebo", "5.9% THC (low dose)")) |> 
+  # Clean up column names to make them consistent; snake-case
   janitor::clean_names() |>
-  rename(thcoh = x11_oh_thc,
-         thccooh = thc_cooh,
-         thccooh_gluc = thc_cooh_gluc,
-         thcv = thc_v) |>
-  mutate(timepoint = case_when(time_from_start < 0 ~ "pre-smoking",
-                               time_from_start > 0 & time_from_start <= 60 ~ "0-60 min",
-                               time_from_start > 61 & time_from_start <= 120 ~ "0-120 min",
-                               time_from_start > 121 & time_from_start <= 180 ~ "0-180 min",
-                               time_from_start > 180 ~ "181+ min"))
+  # Rename columns to more meaningful names for easier analysis
+  rename(thcoh = x11_oh_thc, # Rename 'x11_oh_thc' to 'thcoh'
+         thccooh = thc_cooh, # Rename 'thc_cooh' to 'thccooh'
+         thccooh_gluc = thc_cooh_gluc, # Rename 'thc_cooh_gluc' to 'thccooh_gluc'
+         thcv = thc_v) |> # Rename 'thc_v' to 'thcv'
+  # Create a new 'timepoint' variable based on the 'time_from_start' variable
+  mutate(timepoint = case_when(time_from_start < 0 ~ "pre-smoking",  # If 'time_from_start' < 0, label as "pre-smoking"
+                               time_from_start > 0 & time_from_start <= 60 ~ "0-60 min", # If between 0 to 60 minutes, label as "0-60 min"
+                               time_from_start > 61 & time_from_start <= 120 ~ "0-120 min", # If between 61 to 120 minutes, label as "0-120 min"
+                               time_from_start > 121 & time_from_start <= 180 ~ "0-180 min", # If between 121 to 180 minutes, label as "0-180 min"
+                               time_from_start > 180 ~ "181+ min")) # If more than 180 minutes, label as "181+ min"
+```
 
+Then, the Breath table.
+
+```{r, message=FALSE}
+BR <- BR |>
+  # Re-code 'Treatment' variable for better readability
+  mutate(Treatment = fct_recode(Treatment, 
+                                "5.9% THC (low dose)" = "5.90%", # Re-code "5.90%" to "5.9% THC (low dose)"
+                                "13.4% THC (high dose)" = "13.40%"), # Re-code "13.40%" to "13.4% THC (high dose)"
+         # Re-level the 'Treatment' factor so that "Placebo" is the reference category
+         Treatment = fct_relevel(Treatment, "Placebo", "5.9% THC (low dose)")) |> 
+  # Clean up column names to make them consistent; snake-case
+  janitor::clean_names() |>
+  # Rename columns to more meaningful names for easier analysis
+  rename(thc = thc_pg_pad, # Rename 'thc_pg_pad' to 'thc'
+         fluid_type = fluid) |> # Rename 'fluid_type' to 'fluid'
+  # Create a new 'timepoint' variable based on the 'time_from_start' variable
+  mutate(timepoint = case_when(time_from_start < 0 ~ "pre-smoking", # If 'time_from_start' < 0, label as "pre-smoking"
+                               time_from_start > 0 & time_from_start <= 60 ~ "0-60 min", # If between 0 to 60 minutes, label as "0-60 min"
+                               time_from_start > 61 & time_from_start <= 120 ~ "0-120 min", # If between 61 to 120 minutes, label as "0-120 min"
+                               time_from_start > 121 & time_from_start <= 180 ~ "0-180 min", # If between 121 to 180 minutes, label as "0-180 min"
+                               time_from_start > 180 ~ "181+ min")) # If more than 180 minutes, label as "181+ min"
+```
+
+Last, but not least, the Oral Fluid table.
+
+```{r, message=FALSE}
 OF <- OF |> 
+  # Re-code 'Treatment' variable for better readability
   mutate(Treatment = fct_recode(Treatment, 
-                                "5.9% THC (low dose)" = "5.90%",
-                                "13.4% THC (high dose)" = "13.40%"),
+                                "5.9% THC (low dose)" = "5.90%", # Re-code "5.90%" to "5.9% THC (low dose)"
+                                "13.4% THC (high dose)" = "13.40%"), # Re-code "13.40%" to "13.4% THC (high dose)"
+         # Re-level the 'Treatment' factor so that "Placebo" is the reference category
          Treatment = fct_relevel(Treatment, "Placebo", "5.9% THC (low dose)")) |> 
+  # Clean up column names to make them consistent; snake-case
   janitor::clean_names() |>
-  rename(thcoh = x11_oh_thc,
-         thcv = thc_v,
-         fluid_type = fluid) |>
-  mutate(timepoint = case_when(time_from_start < 0 ~ "pre-smoking",
-                               time_from_start > 0 & time_from_start <= 60 ~ "0-60 min",
-                               time_from_start > 61 & time_from_start <= 120 ~ "0-120 min",
-                               time_from_start > 121 & time_from_start <= 180 ~ "0-180 min",
-                               time_from_start > 180 ~ "181+ min"))
-
-BR <- BR |> 
-  mutate(Treatment = fct_recode(Treatment, 
-                                "5.9% THC (low dose)" = "5.90%",
-                                "13.4% THC (high dose)" = "13.40%"),
-         Treatment = fct_relevel(Treatment, "Placebo", "5.9% THC (low dose)")) |> 
-  janitor::clean_names() |>
-  rename(thc = thc_pg_pad,
-         fluid_type = fluid) |>
-  mutate(timepoint = case_when(time_from_start < 0 ~ "pre-smoking",
-                               time_from_start > 0 & time_from_start <= 60 ~ "0-60 min",
-                               time_from_start > 61 & time_from_start <= 120 ~ "0-120 min",
-                               time_from_start > 121 & time_from_start <= 180 ~ "0-180 min",
-                               time_from_start > 180 ~ "181+ min"))
-
-combined <- bind_rows(list(WB, OF, BR))
-write_csv(combined, "combined_data.csv")
+  # Rename columns to more meaningful names for easier analysis
+  rename(thcoh = x11_oh_thc, # Rename 'x11_oh_thc' to 'thcoh'
+         thcv = thc_v, # Reanme 'thc_v' to 'thcv'
+         fluid_type = fluid) |> # Rename 'fluid_type' to 'fluid'
+  # Create a new 'timepoint' variable based on the 'time_from_start' variable
+  mutate(timepoint = case_when(time_from_start < 0 ~ "pre-smoking", # If 'time_from_start' < 0, label as "pre-smoking"
+                               time_from_start > 0 & time_from_start <= 60 ~ "0-60 min", # If between 0 to 60 minutes, label as "0-60 min"
+                               time_from_start > 61 & time_from_start <= 120 ~ "0-120 min", # If between 61 to 120 minutes, label as "0-120 min"
+                               time_from_start > 121 & time_from_start <= 180 ~ "0-180 min", # If between 121 to 180 minutes, label as "0-180 min"
+                               time_from_start > 180 ~ "181+ min")) # If more than 180 minutes, label as "181+ min"
 ```
 
-```{r}
+After cleaning our data, we combined the three data set tables into a single data set and stored in a new csv.
+
+```{r, message=FALSE}
+combined <- bind_rows(list(WB, OF, BR)) # Combine the WB, OF, and BR data frames into one 
+write_csv(combined, "data/combined_data.csv") # Write the combined data set to a CSV file in the "data" folder
+```
+
+## Exploratory Data Analysis (EDA)
+
+To get a broad view of compound level in our dataset, we plotted compound levels over time within each fluid type to observe any changes and trends across different time intervals.
+
+First we convert compound data to a long format for easier potting of concentration trends across time and compounds.
+```{r compounds, message=FALSE}
 combined_long <- combined |> 
   select(1:5,time_from_start,everything()) |>
   pivot_longer(7:15)
 
-invisible(ggplot(combined_long, aes(x = value)) + 
-  geom_histogram() +
-  facet_wrap(~name))
+```
 
-invisible(combined_long |>
-  mutate(group_compound = paste0(fluid_type, ": ", name)) |>
-  ggplot(aes(x = value)) + 
-  geom_histogram() + 
-  facet_wrap(~group_compound, scales = "free"))
-
-invisible(combined_long |> 
-  filter(name == "thc") |>
-  ggplot(aes(x = group, y = value)) + 
-  geom_boxplot() +
-  facet_wrap(~fluid_type, scales = "free"))
-
-invisible(combined_long |> 
-  filter(name == "thc") |>
-  ggplot(aes(x = treatment, y = value)) + 
-  geom_boxplot() +
-  facet_wrap(~fluid_type, scales = "free"))
-
-invisible(combined_long |> 
-  filter(name == "thc", (timepoint == "0-30 min" | timepoint == "0-40 min")) |>
-  ggplot(aes(x = treatment, y = value)) + 
-  geom_boxplot() +
-  facet_wrap(~fluid_type, scales = "free"))
-
+Now that the data is in long format, we define a function to visualize compound concentration level over time for different fluid types. This function allows us to filter the data by a specific matrix (such as WB for whole blood, OF for oral fluid, or BR for breath) and pot scatter points of compound concentration (y-axis) against time from start (x-axis).
+```{r}
 plot_scatter_time <- function(matrix) {
   combined_long |> 
       filter(!is.na(time_from_start), fluid_type==matrix) |>
@@ -150,74 +176,88 @@ plot_scatter_time <- function(matrix) {
               strip.background=element_blank(),
               plot.title.position="plot") 
 }
+```
 
+Our `plot_scatter_time` function to visualize compound concentration over time in whole blood (WB). This will help us identify trends in compound levels as time progresses within this specific fluid type.
+```{r}
 plot_scatter_time(matrix = "WB")
+```
+
+Each plot represents a different compound, with frequent users in green and occasional users in purple. THC levels peak shortly after the start time, particularly for frequent users, and then decline quickly. Other compounds, like THCCOOH and THCCOOH_Gluc, stay more stable over time. Overall, frequent users tend to have higher concentrations across compounds compared to occasional users.
+
+Next, we generate a similar plot for oral fluid (OF). This comparison will allow us to observe any unique patterns or differences in compound concentration across time interval to oral fluid samples.
+```{r}
 plot_scatter_time(matrix = "OF")
+```
+
+THC levels show a sharp increase near starting time, particularly for less experienced users, before decreasing. Compounds like THCA_A and CBG also peak briefly before leveling out. Unlike whole blood, oral fluid concentrations are generally lower and decrease more rapidly. Less experienced users tend to have higher peak levels across several compounds, indicating possible differences in compound metabolism between groups.
+
+Finally, we produce the plot for compound concentrations overall time within the breath (BR) fluid type. 
+```{r}
 plot_scatter_time(matrix = "BR")
+```
+
+THC showed a sharp but short peak near the start time, especially for experienced users, and levels quickly returned to baseline. Most of the other compounds were barely detectable throughout the time period, suggesting minimal presence in the breath samples. The lack of change in compounds over time suggests that breath may be less effective at tracking these compounds compared to other matrices.
+
+```{r}
+combined
+```
+
+```{r}
+combined_long
+
 ```
 
 
 ```{r}
-<<<<<<< HEAD
-
-combined_long <- combined |> 
-  select(1:5,time_from_start,everything()) |>
-  pivot_longer(7:15)
-
-invisible(ggplot(combined_long, aes(x = value)) + 
-  geom_histogram() +
-  facet_wrap(~name))
-
-invisible(combined_long |>
-  mutate(group_compound = paste0(fluid_type, ": ", name)) |>
-  ggplot(aes(x = value)) + 
-  geom_histogram() + 
-  facet_wrap(~group_compound, scales = "free"))
-
-invisible(combined_long |> 
-  filter(name == "thc") |>
-  ggplot(aes(x = group, y = value)) + 
-  geom_boxplot() +
-  facet_wrap(~fluid_type, scales = "free"))
-
-invisible(combined_long |> 
-  filter(name == "thc") |>
-  ggplot(aes(x = treatment, y = value)) + 
-  geom_boxplot() +
-  facet_wrap(~fluid_type, scales = "free"))
-
-invisible(combined_long |> 
-  filter(name == "thc", (timepoint == "0-30 min" | timepoint == "0-40 min")) |>
-  ggplot(aes(x = treatment, y = value)) + 
-  geom_boxplot() +
-  facet_wrap(~fluid_type, scales = "free"))
-
-plot_scatter_time <- function(matrix) {
+boxplot_treatment <- function(matrix) {
   combined_long |> 
-      filter(!is.na(time_from_start), fluid_type==matrix) |>
-      ggplot(aes(x=time_from_start, y=value, color=group)) + 
-        geom_point() +
-        facet_wrap(~name, scales="free") +
-        scale_color_manual(values=c("#19831C", "#A27FC9")) +
-        theme_classic() +
-        labs(title=paste("Compound Levels Across Time for", matrix),
-             x="Time From Start (min)",
-             y="Concentration (pg/mL)") +
-        theme(legend.position="bottom",
-              legend.title=element_blank(),
-              strip.background=element_blank(),
-              plot.title.position="plot") 
+    # Filter for the specified matrix, compound "THC", and relevant timepoints
+    filter(fluid_type == matrix,
+           name == "thc",
+           timepoint %in% c("pre-smoking", "0-60 min", "0-120 min", "0-180 min", "181+ min")) |>
+     mutate(timepoint = factor(timepoint, levels = c("pre-smoking", "0-60 min", "0-120 min", "0-180 min", "181+ min")),
+           treatment = factor(treatment, levels = unique(combined_long$treatment))) |>
+    ggplot(aes(x = treatment, y = value, fill = group)) + 
+    
+      # Add jittered points for individual measurements
+      geom_jitter(position = position_jitter(width = 0.3, height = 0), 
+                  size = 0.8, 
+                  color = "gray50") +
+      
+      # Add boxplot with adjusted transparency
+      geom_boxplot(outlier.size = 0.1, alpha = 0.8) +
+      
+      # Facet by timepoint for each specified interval
+      facet_wrap(~ timepoint, scales = "free_y") +
+      
+      # Wrapping long x-axis labels for readability
+      scale_x_discrete(labels = function(x) str_wrap(x, width = 10)) +
+      
+      # Adjust y-axis limits and padding
+      scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0, 0.1))) +
+
+      scale_fill_manual(values = c("#19831C", "#A27FC9")) +
+      theme_classic() +
+      labs(title = paste("THC Levels by Treatment for", matrix), 
+           y = "Measurement (ng/mL)") + 
+      
+      # Customize text size, legend position, and remove unnecessary panel elements
+      theme(text = element_text(size = 12),
+            legend.position = "bottom",
+            legend.title = element_blank(),
+            panel.grid = element_blank(),
+            plot.title.position = "plot",
+            strip.background = element_blank(),
+            strip.text = element_text(size = 12))
 }
-
-plot_scatter_time(matrix = "WB")
-plot_scatter_time(matrix = "OF")
-plot_scatter_time(matrix = "BR")
-
 ```
 
-```{r ratios}
-=======
->>>>>>> ff15d15ccadd72846c98eb72dbee8f1dd4c289ca
+```{r}
+boxplot_treatment("WB")
+```
+
+```{r thc across fluids, message=FALSE}
 ggplot(combined, aes(x = time_from_start, y = thc)) +
   geom_point(size = 1, color = "lightgreen") +
   facet_wrap(~ fluid_type, scales = "free_y") +
@@ -234,10 +274,9 @@ ggplot(combined, aes(x = time_from_start, y = thc)) +
   )
 ```
 
+## Analysis
 
-
-<<<<<<< HEAD
-```{r WB all dosages}
+```{r WB all dosages, message=FALSE}
 ggplot(combined, aes(x = timepoint, y = thc, color = treatment, group = treatment)) +
   geom_line() +
   geom_point(position = position_jitter(width = 0.2), size = 2) +  # Add jitter for better visibility
@@ -255,17 +294,14 @@ ggplot(combined, aes(x = timepoint, y = thc, color = treatment, group = treatmen
     legend.position = "top"
   )
 ```
-<<<<<<< HEAD
 
 
-=======
->>>>>>> origin/main
-```{r WB of the first 3 hours}
+```{r WB of the first 3 hours, message=FALSE}
 ggplot(combined %>% filter(fluid_type == "WB" & time_from_start >= 0 & time_from_start <= 180), aes(x = time_from_start, y = thc, color = treatment, group = treatment)) +
   geom_line() +
   geom_point(position = position_jitter(width = 0.2), size = 2) +  # Add jitter for better visibility
   labs(
-    title = "THC Levels Across Water Blood Over Time",
+    title = "THC Levels Across Whole Blood Over Time",
     x = "Time Interval",
     y = "THC Level",
     color = "Dosage"
@@ -277,17 +313,14 @@ ggplot(combined %>% filter(fluid_type == "WB" & time_from_start >= 0 & time_from
     legend.position = "bottom"
   )
 ```
-<<<<<<< HEAD
 
 
-=======
->>>>>>> origin/main
-```{r}
+```{r thc in wb, message=FALSE}
 ggplot(combined %>% filter(fluid_type == "WB" & time_from_start >= 0 & time_from_start <= 60), aes(x = time_from_start, y = thc, color = treatment, group = treatment)) +
   geom_line() +
   geom_point(position = position_jitter(width = 0.2), size = 2) +  # Add jitter for better visibility
   labs(
-    title = "THC Levels Across Water Blood Over Time",
+    title = "THC Levels Across Whole Blood Over Time",
     x = "Time Interval",
     y = "THC Level",
     color = "Dosage"
@@ -299,18 +332,15 @@ ggplot(combined %>% filter(fluid_type == "WB" & time_from_start >= 0 & time_from
     legend.position = "bottom"
   )
 ```
-<<<<<<< HEAD
 
 
-=======
->>>>>>> origin/main
-```{r}
+```{r thc in wb 2, message=FALSE}
 ggplot(combined %>% filter(fluid_type == "WB" & time_from_start >= 0 & time_from_start <= 60), aes(x = time_from_start, y = thc, color = treatment, group = treatment)) +
   geom_line() +
   geom_point(position = position_jitter(width = 0.2), size = 2) +
   facet_wrap(~treatment) +
   labs(
-    title = "THC Levels Across Water Blood Over Time",
+    title = "THC Levels Across Whole Blood Over Time",
     x = "Time Interval",
     y = "THC Level",
     color = "Dosage"
@@ -324,25 +354,336 @@ ggplot(combined %>% filter(fluid_type == "WB" & time_from_start >= 0 & time_from
 ```
 
 
-
-<<<<<<< HEAD
-=======
+```{r thc in of, message=FALSE}
+ggplot(combined %>% filter(fluid_type == "OF" & time_from_start >= 0 & time_from_start <= 60), aes(x = time_from_start, y = thc, color = treatment, group = treatment)) +
+  geom_line() +
+  geom_point(position = position_jitter(width = 0.2), size = 2) +
+  facet_wrap(~treatment) +
+  labs(
+    title = "THC Levels Across Oral Fluid Over Time",
+    x = "Time Interval",
+    y = "THC Level",
+    color = "Dosage"
+  ) +
+  theme_minimal(base_size = 14) +  # Increase base font size for better readability
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    axis.text.x = element_text(angle = 45, hjust = 1),  # Rotate x-axis labels
+    legend.position = "bottom"
+  )
 ```
 
->>>>>>> origin/main
+Specificity and Sensitivity
+
+As we focus on THC as the main compound to our study for recent THC use, it would be best to explore the [bold] specificity [bold] pf THC as we want to be the most certain that using knowledge that they are either a frequent or occasional user, are within the time interval of one hour, and tested through WB, we are more likely to identify with high specificity if the individual has used in the past hour (less false positives).
+
+With respect to a study that found the highest accuracy of yielding 96% for a "molar metabolite ratio 1", the study had measured whole blood THC and metabolites in the time interval of 30 minutes "after starting a 15-minute interval" of cannabis intake, where they had found with THC alone the cut-point yielded "88% specificity, 73% sensitivity, and 80% accuracy" for identifying recent cannabis use. 
+
+Within our study, we want to utilize the focus for specificity as we calculate our data to include the cutoff of similarly to their cut-point of 5.3 mu grams/L, which is 5.3 ng/mL. In the study, it has yielded around 75% specificity and sensitivity, so this will be our baseline with the data we have currently. As the data displays THC concentration of 
+
+Change Combined Data to include only "Frequent user" and "Occassional user" instead of "experienced" and "non-experienced"
+```{r}
+combined_user_long <- combined_long |>
+  mutate(group = fct_recode(group, "Frequent user" = "Experienced user", "Occasional user" = "Not experienced user"))
+```
+
+Range, Median, Mean of THC in Whole Blood
+
+```{r}
+wbthc_range <- range(WB$thc)
+wbthc_median <- median(WB$thc, na.rm = TRUE)
+wbthc_mean <- mean(WB$thc, na.rm = TRUE)
+
+WBTHC_summary <- list(
+  range = wbthc_range,
+  median = wbthc_median,
+  wbthc_mean
+)
+
+print(WBTHC_summary)
+```
+
+Calculation Function for Specificity and Sensitivity
+```{r sens and spec}
+make_calculations <- function(dataset, cutoff, compound, timepoint_use){
+  ## remove NAs
+  df <- dataset |>
+    select(treatment, {{ compound }}, timepoint) |>
+    filter(timepoint == timepoint_use, !is.na({{ compound }}))
+
+  if(nrow(df)>0){
+    if(timepoint_use == "pre-smoking"){
+      output <- df |> 
+        summarize(TP = 0,
+                  FN = 0,
+                  FP = sum(!!sym(compound) >= cutoff),
+                  TN = sum(!!sym(compound) < cutoff)) 
+    }else{
+      if(cutoff == 0){
+        output_pre <- df |> 
+          filter(timepoint_use == "pre-smoking") |>
+          summarize(TP = 0,
+                    FN = 0,
+                    FP = sum(!!sym(compound) >= cutoff),
+                    TN = sum(!!sym(compound) < cutoff)) 
+        
+        output <- df |> 
+          filter(timepoint_use != "pre-smoking") |>
+          summarize(TP = sum(treatment != "Placebo" & !!sym(compound) > cutoff),
+                    FN = sum(treatment != "Placebo" & !!sym(compound) <= cutoff),
+                    FP = sum(treatment == "Placebo" & !!sym(compound) > cutoff),
+                    TN = sum(treatment == "Placebo" & !!sym(compound) < cutoff))
+        
+        output <- output + output_pre
+      }else{
+        output_pre <- df |> 
+          filter(timepoint_use == "pre-smoking") |>
+          summarise(TP = 0,
+                    FN = 0,
+                    FP = sum(!!sym(compound) >= cutoff),
+                    TN = sum(!!sym(compound) < cutoff)) 
+        
+        output <- df |> 
+          filter(timepoint_use != "pre-smoking") |>
+          summarise(TP = sum(treatment != "Placebo" & !!sym(compound) >= cutoff),
+                    FN = sum(treatment != "Placebo" & !!sym(compound) < cutoff),
+                    FP = sum(treatment == "Placebo" & !!sym(compound) >= cutoff),
+                    TN = sum(treatment == "Placebo" & !!sym(compound) < cutoff))
+        
+        output <- output + output_pre
+      }
+    }
+  
+  # clean things up; make calculations on above values
+  output <- output |>
+    mutate(detection_limit = cutoff,
+           compound = compound,
+           time_window = timepoint_use,
+           NAs = nrow(dataset) - nrow(df),
+           N = nrow(dataset),
+           Sensitivity = (TP/(TP + FN)), 
+           Specificity = (TN /(TN + FP)),
+           PPV = (TP/(TP+FP)),
+           NPV = (TN/(TN + FN)),
+           Efficiency = ((TP + TN)/(TP + TN + FP + FN))*100
+    )
+  return(output)
+}
+}
+```
+
+Map for each matrix
+```{r}
+sens_spec_cpd <- function(dataset, cpd, timepoints){
+  args2 <- list(start = timepoints$start, 
+                stop = timepoints$stop, 
+                tpt_use = timepoints$timepoint)
+  out <- args2 |> 
+    pmap_dfr(make_calculations, dataset, compound = cpd)
+  return(out)
+}
+```
+
+Choosing the cutoffs for THC, we used 5 ng/mL as our baseline representation. 
+```{r}
+# specify which calculations to make
+cutoffs <- c(0.5, 1, 5, 7.5, 10)
+compounds <- combined_user_long |> filter(fluid_type=="WB") |> filter(!is.na(value)) |> distinct(name) |> pull(name)
+WB_timepoints <- c("pre-smoking", "0-60 min", "0-120 min", "181+ min")
+WB <- combined |> filter(fluid_type=="WB")
+
+# Specify all parameter combinations
+param_grid <- expand.grid(
+  cutoffs = cutoffs,
+  compounds = compounds,
+  timepoint_use = WB_timepoints)
 
 
-=======
->>>>>>> ff15d15ccadd72846c98eb72dbee8f1dd4c289ca
-## Analysis
+# Calculate for all cutoff-compound-timepoint combinations
+WB_ss <- purrr::pmap_dfr(param_grid, ~ make_calculations(dataset=WB, cutoff = ..1, compound = as.character(..2), timepoint_use = ..3))
+
+WB_ss
+```
+
+Sensitivity and Specificity Plot
+```{r}
+plot_cutoffs <- function(dataset, timepoint_use_variable, tissue, cpd){
+    # control colors and lines used in plots
+    col_val = c("#D9D9D9", "#BDBDBD", "#969696", "#636363", "#252525")
+    lines = rep("solid", 5)
+    
+    # prep data
+    df_ss <- dataset |> 
+      filter(compound == cpd) |>
+      mutate(time_window = fct_relevel(as.factor(time_window), levels(timepoint_use_variable)),
+             detection_limit = as.factor(detection_limit),
+             Sensitivity =  round(Sensitivity*100, 0),
+             Specificity =  round(Specificity*100, 0))        
+      
+    # plot sensitivity
+    p1 <- df_ss |> 
+      ggplot(aes(x = time_window, y = Sensitivity, 
+                 color = detection_limit)) + 
+      geom_line(linewidth = 1.2, aes(group = detection_limit, 
+                                linetype = detection_limit)) + 
+      geom_point(show.legend=FALSE) + 
+      ylim(0,100) +
+      scale_x_discrete(labels = function(x) str_wrap(x, width = 5)) +
+      scale_linetype_manual(values=lines) +
+      scale_color_manual(values = col_val, name = "Cutoff \n (ng/mL)",
+                        guide = guide_legend(override.aes = list(linetype = c(1),
+                        shape = rep(NA, length(lines))) )) +
+      theme_classic() +
+      theme(plot.title.position = "plot",
+            axis.title = element_text(size=14),
+            axis.text = element_text(size=10),
+            legend.position = "none", 
+            panel.grid = element_blank(),
+            strip.background = element_blank()
+            ) +
+      guides(linetype = "none") +
+      labs(x = "Time Window (min)", 
+           y = "Sensitivity", 
+           title = paste0(tissue,": ", toupper(cpd)) )
+  
+  # plot specificity
+  p2 <- df_ss |> 
+      ggplot(aes(x = time_window, y = Specificity,
+                 group = detection_limit, 
+                 color = detection_limit, 
+                 linetype = detection_limit)) + 
+      geom_line(linewidth = 1.2) +
+      geom_point() + 
+      ylim(0,100) +
+      scale_color_manual(values = col_val) +
+      scale_x_discrete(labels = function(x) str_wrap(x, width = 5)) +
+      scale_linetype_manual(values = lines, 
+                            guide = guide_legend(override.aes = list(linetype = "solid",
+                                                                     shape = rep(NA, length(lines))) )) +
+      theme_classic() +
+      theme(axis.title = element_text(size=14),
+            axis.text = element_text(size=10),
+            legend.position = c(0.35, 0.25),
+            panel.grid = element_blank(),
+            strip.background = element_blank()) +
+      labs(x = "Time Window", 
+           y = "Specificity",
+           title = "" )
+  
+  # combine plots (uses patchwork)
+  p1 + p2
+}
+```
+
+Whole Blood Content for THC Cutoff Plot Over Time
+```{r}
+plot_cutoffs(dataset=WB_ss, 
+             timepoint_use_variable=WB$timepoint, 
+             tissue="Blood", 
+             cpd="thc")
+```
+
+We can see that with our plot of specificity, 5 ng/mL and more of THC in blood yield over 90% in specificity and over  73% sensitivity to identify individuals who do not have any THC in the system, indicating that similar to prior research, there is validity to the concentration of 5.3 ng/mL for THC to be likely to be identifiable of THC and can provide decisions on when to exclude false positives of THC in system. With sensitivity, although high in the first hour, the time periods drop directly after to lower than 25% sensitvity after 3 hours, so we want to note for future concentrations that have an increase dose of 5 ng/mL may opt for higher sensitivity. 
+
+Now, to compare with other matrix's to see if THC has a higher sensitivity and specificity compared to Oral Fluid and Breath. 
+
+### Oral Fluid
+```{r}
+# specify which calculations to make
+cutoffs <- c(0.5, 1, 5, 7.5, 10)
+compounds <- combined_user_long |> filter(fluid_type=="OF") |> filter(!is.na(value)) |> distinct(name) |> pull(name)
+OF_timepoints <- c("pre-smoking","0-60 min","0-120 min",
+                   "181+ min") 
+OF <- combined |> filter(fluid_type=="OF")
+
+# Specify all parameter combinations
+param_grid <- expand.grid(
+  cutoffs = cutoffs,
+  compounds = compounds,
+  timepoint_use = OF_timepoints)
+
+# Calculate for all cutoff-compound-timepoint combinations
+OF_ss <- purrr::pmap_dfr(param_grid, ~ make_calculations(dataset=OF, cutoff = ..1, compound = as.character(..2), timepoint_use = ..3))
+
+OF_ss
+```
+```{r}
+plot_cutoffs(dataset=OF_ss, 
+             timepoint_use_variable=OF$timepoint, 
+             tissue="Oral Fluid", 
+             cpd="thc")
+```
+When looking at Oral Fluid, we can see that for 5 ng/mL, the trend of high sensitivity and specificity continues as for the presmoking period in specificity and for the first hour for both all yield high percentages, indicating that oral fluid also contributes to having a high likelihood to detect THC even in small amounts. However, although sensitivity is higher for all concentrations in the first hour, there is a large falloff in the first hour, distinctly in detection of false positives in specificity for lower doses within the hour interval, which does not yield more accurate results compared to whole blood.
+
+### Breath Level
+```{r}
+# specify which calculations to make
+cutoffs <- c(0.5, 1, 5, 7.5, 10)
+compounds <- combined_user_long |> filter(fluid_type=="BR") |> filter(!is.na(value)) |> distinct(name) |> pull(name)
+BR_timepoints <- c("pre-smoking","0-60 min","0-120 min",
+                   "181+ min") 
+BR <- combined |> filter(fluid_type=="BR")
+
+# Specify all parameter combinations
+param_grid <- expand.grid(
+  cutoffs = cutoffs,
+  compounds = compounds,
+  timepoint_use = OF_timepoints)
+
+# Calculate for all cutoff-compound-timepoint combinations
+BR_ss <- purrr::pmap_dfr(param_grid, ~ make_calculations(dataset=BR, cutoff = ..1, compound = as.character(..2), timepoint_use = ..3))
+
+BR_ss
+```
+```{r}
+plot_cutoffs(dataset=BR_ss, 
+             timepoint_use_variable=BR$timepoint, 
+             tissue="Breath", 
+             cpd="thc")
+```
+Compared to the Whole Blood and Oral Fluid, Breath seems to be only applicable for higher detection limits, which in this case is 10 ng/mL. And since we have already found that 5 ng/mL is already accurate in detecting with high specificity and sensitivity and we would like the lower dosage possible for detection, we can assess that the breath matrix is unnecessary for our study and has use for larger doses in the first three hours.
+
+```{r}
+# specify which calculations to make
+cutoffs <- c(0.1, 5, 5.5, 6, 6.5)
+compounds <- combined_user_long |> filter(fluid_type=="WB") |> filter(!is.na(value)) |> distinct(name) |> pull(name)
+WB_timepoints <- c("pre-smoking", "0-60 min", "0-120 min", "181+ min")
+WB <- combined |> filter(fluid_type=="WB")
+
+# Specify all parameter combinations
+param_grid <- expand.grid(
+  cutoffs = cutoffs,
+  compounds = compounds,
+  timepoint_use = WB_timepoints)
 
 
+# Calculate for all cutoff-compound-timepoint combinations
+WB_new_ss <- purrr::pmap_dfr(param_grid, ~ make_calculations(dataset=WB, cutoff = ..1, compound = as.character(..2), timepoint_use = ..3))
+
+WB_new_ss
+```
+```{r}
+plot_cutoffs(dataset=WB_new_ss, 
+             timepoint_use_variable=WB$timepoint, 
+             tissue="Blood", 
+             cpd="thc")
+```
+In context for cutoffs between 5 ng/mL -7 ng/mL, it has shown that higher detection limits do often become less sensitive to accuracy overtime, leading to a drop in likelihood to identify if THC has been recently used. The cutoffs in the middle have the most likelihood to be optimal in detecting THC in Blood that would be less sensitive to small traces of THC in the system that may not be causal for impairment, but is more likely to pick up a concentration of THC metabolites that is sustained in Blood for longer overtime.
 
 
 ## Results & Discussion 
 
-## Conclusion
+The context of our question focuses on 
+1. Which matrix–blood, oral fluid, or breath–is most effective for detecting recent THC use within a 3-hour window?
+2. What is the optimal cutoff within this 3-hour timeframe for detecting THC in each matrix?
+3. How does the treatment group (Placebo, 5.9% THC, or 13.4% THC) affect the detection of recent THC use in each matrix?
 
+
+
+
+
+
+## Conclusion
 
 
 [^1]: Pearson, J., et al. (2020). *Legal implications of THC per se limits.* Journal of Accident Analysis & Prevention. Retrieved from [Taylor & Francis Online](https://www.tandfonline.com/doi/full/10.1080/15389588.2020.1851685). 
@@ -350,3 +691,5 @@ ggplot(combined %>% filter(fluid_type == "WB" & time_from_start >= 0 & time_from
 [^2]: Huestis, M. A. (2007). *Human cannabinoid pharmacokinetics.* Chemistry & Biodiversity, 4(8), 1770-1804. [https://pmc.ncbi.nlm.nih.gov/articles/PMC2689518/). 
 
 [^3]: Compton, R. (2017). *Marijuana-impaired driving: A report to Congress.* National Highway Traffic Safety Administration. Retrieved from [NGTSA](https://www.nhtsa.gov/sites/nhtsa.gov/files/documents/812440-marijuana-impaired-driving-report-to-congress.pdf).
+
+[^4] Kosnett, M. J., Ma, M., Dooley, G., Wang, G. S., Friedman, K., Brown, T., Henthorn, T. K., & Brooks-Russell, A. (2023). Blood cannabinoid molar metabolite ratios are superior to blood THC as an indicator of recent cannabis smoking. Clinical Toxicology, 61(5), 355–362. https://doi.org/10.1080/15563650.2023.2214697 
