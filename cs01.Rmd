@@ -40,19 +40,20 @@ The data set that we will be using for our case study is provided to us by Profe
 
 ### Data Import
 
-In order to begin our analysis, we imported our raw data from our data/ folder.
+In order to begin our analysis, we imported our raw data of whole blood, breath, and oral fluids from our data/ folder.
 
 ```{r, message=FALSE}
 WB <- read_csv("data/Blood.csv")
 BR <- read_csv("data/Breath.csv")
 OF <- read_csv("data/OF.csv")
 ```
-
 ### Data Wrangling
 
 Now that we have our data properly imported, we need to wrangle our data in R before starting our analysis. 
 
-To begin our data wrangling, we took the imported data, in the form of a table, and modified the columns and transformed its data to reorganize it for better structure. There are three datasets for each fluid type, blood, oral, and breath, we reformatted the entries in the `Treatment` column to make them easier to read. We also turned all the columns into snake case. For all the compounds in each dataset, we renamed the column names.
+To begin our data wrangling, we imported the data as tables and modified the columns, transforming the data to improve its structure. There are three dataset tables for each fluid type, blood, oral, and breath, in which we reformatted the entries in the `Treatment` column for better readability. We also converted all column names to snake case to simplify future coding. We renamed the columns for all compounds in each dataset to ensure clear differentiation. Note that not every fluid type contains all of the compounds. To create time intervals, we turned the `time_from_start`column into hour intervals in `timepoint`.
+
+We start with the Whole Blood table.
 
 ```{r, message=FALSE}
 WB <- WB |> 
@@ -72,6 +73,8 @@ WB <- WB |>
                                time_from_start > 180 ~ "181+ min"))
 ```
 
+Then, the Oral Fluid table.
+
 ```{r, message=FALSE}
 OF <- OF |> 
   mutate(Treatment = fct_recode(Treatment, 
@@ -89,6 +92,8 @@ OF <- OF |>
                                time_from_start > 180 ~ "181+ min"))
 ```
 
+Last, but not least, the Breath table.
+
 ```{r, message=FALSE}
 BR <- BR |> 
   mutate(Treatment = fct_recode(Treatment, 
@@ -104,6 +109,8 @@ BR <- BR |>
                                time_from_start > 121 & time_from_start <= 180 ~ "0-180 min",
                                time_from_start > 180 ~ "181+ min"))
 ```
+
+After cleaning our data, we combined the three dataset tables into a single dataset and stored in a new csv.
 
 ```{r, message=FALSE}
 combined <- bind_rows(list(WB, OF, BR))
