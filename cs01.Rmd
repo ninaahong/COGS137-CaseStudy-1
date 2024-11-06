@@ -17,6 +17,8 @@ knitr::opts_chunk$set(warning=FALSE)
 
 ```{r load-packages, message=FALSE}
 library(tidyverse)
+library(dplyr)
+library(tidyr)
 library(ggplot2)
 ```
 
@@ -121,41 +123,18 @@ write_csv(combined, "data/combined_data.csv")
 
 ## Exploratory Data Analysis (EDA)
 
-To get a broad view of compound level in our dataset, we visualized the distribution of each compound across all data points. To track changes over time, we plotted compound levels in each fluid type by time intervals, allowing us to observe trends in a
+To get a broad view of compound level in our dataset, we plotted compound levels over time within each fluid type to observe any changes and trends across different time intervals.
 
+First we convert compound data to a long format for easier potting of concentration trends across time and compounds.
 ```{r compounds, message=FALSE}
 combined_long <- combined |> 
   select(1:5,time_from_start,everything()) |>
   pivot_longer(7:15)
 
-invisible(ggplot(combined_long, aes(x = value)) + 
-  geom_histogram() +
-  facet_wrap(~name))
+```
 
-invisible(combined_long |>
-  mutate(group_compound = paste0(fluid_type, ": ", name)) |>
-  ggplot(aes(x = value)) + 
-  geom_histogram() + 
-  facet_wrap(~group_compound, scales = "free"))
-
-invisible(combined_long |> 
-  filter(name == "thc") |>
-  ggplot(aes(x = group, y = value)) + 
-  geom_boxplot() +
-  facet_wrap(~fluid_type, scales = "free"))
-
-invisible(combined_long |> 
-  filter(name == "thc") |>
-  ggplot(aes(x = treatment, y = value)) + 
-  geom_boxplot() +
-  facet_wrap(~fluid_type, scales = "free"))
-
-invisible(combined_long |> 
-  filter(name == "thc", (timepoint == "0-30 min" | timepoint == "0-40 min")) |>
-  ggplot(aes(x = treatment, y = value)) + 
-  geom_boxplot() +
-  facet_wrap(~fluid_type, scales = "free"))
-
+Now that the data is in long format, we define a function to visualize compound concentration level over time for different fluid types. This function allows us to filter the data by a specific matrix (such as WB for whole blood, OF for oral fluid, or BR for breath) and pot scatter points of compound concentration (y-axis) against time from start (x-axis).
+```{r}
 plot_scatter_time <- function(matrix) {
   combined_long |> 
       filter(!is.na(time_from_start), fluid_type==matrix) |>
@@ -172,17 +151,90 @@ plot_scatter_time <- function(matrix) {
               strip.background=element_blank(),
               plot.title.position="plot") 
 }
+```
 
+Our `plot_scatter_time` function to visualize compound concentration over time in whole blood (WB). This will help us identify trends in compound levels as time progresses within this specific fluid type.
+```{r}
 plot_scatter_time(matrix = "WB")
+```
+
+Each plot represents a different compound, with frequent users in green and occasional users in purple. THC levels peak shortly after the start time, particularly for frequent users, and then decline quickly. Other compounds, like THCCOOH and THCCOOH_Gluc, stay more stable over time. Overall, frequent users tend to have higher concentrations across compounds compared to occasional users.
+
+Next, we generate a similar plot for oral fluid (OF). This comparison will allow us to observe any unique patterns or differences in compound concentration across time interval to oral fluid samples.
+```{r}
 plot_scatter_time(matrix = "OF")
+```
+
+THC levels show a sharp increase near starting time, particularly for less experienced users, before decreasing. Compounds like THCA_A and CBG also peak briefly before leveling out. Unlike whole blood, oral fluid concentrations are generally lower and decrease more rapidly. Less experienced users tend to have higher peak levels across several compounds, indicating possible differences in compound metabolism between groups.
+
+Finally, we produce the plot for compound concentrations overall time within the breath (BR) fluid type. 
+```{r}
 plot_scatter_time(matrix = "BR")
 ```
 
-## Analysis
+THC showed a sharp but short peak near the start time, especially for experienced users, and levels quickly returned to baseline. Most of the other compounds were barely detectable throughout the time period, suggesting minimal presence in the breath samples. The lack of change in compounds over time suggests that breath may be less effective at tracking these compounds compared to other matrices.
+
+```{r}
+combined
+```
+
+```{r}
+combined_long
+
+```
+
+
+```{r}
+boxplot_treatment <- function(matrix) {
+  combined_long |> 
+    # Filter for the specified matrix, compound "THC", and relevant timepoints
+    filter(fluid_type == matrix,
+           name == "thc",
+           timepoint %in% c("pre-smoking", "0-60 min", "0-120 min", "0-180 min", "181+ min")) |>
+     mutate(timepoint = factor(timepoint, levels = c("pre-smoking", "0-60 min", "0-120 min", "0-180 min", "181+ min")),
+           treatment = factor(treatment, levels = unique(combined_long$treatment))) |>
+    ggplot(aes(x = treatment, y = value, fill = group)) + 
+    
+      # Add jittered points for individual measurements
+      geom_jitter(position = position_jitter(width = 0.3, height = 0), 
+                  size = 0.8, 
+                  color = "gray50") +
+      
+      # Add boxplot with adjusted transparency
+      geom_boxplot(outlier.size = 0.1, alpha = 0.8) +
+      
+      # Facet by timepoint for each specified interval
+      facet_wrap(~ timepoint, scales = "free_y") +
+      
+      # Wrapping long x-axis labels for readability
+      scale_x_discrete(labels = function(x) str_wrap(x, width = 10)) +
+      
+      # Adjust y-axis limits and padding
+      scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0, 0.1))) +
+
+      scale_fill_manual(values = c("#19831C", "#A27FC9")) +
+      theme_classic() +
+      labs(title = paste("THC Levels by Treatment for", matrix), 
+           y = "Measurement (ng/mL)") + 
+      
+      # Customize text size, legend position, and remove unnecessary panel elements
+      theme(text = element_text(size = 12),
+            legend.position = "bottom",
+            legend.title = element_blank(),
+            panel.grid = element_blank(),
+            plot.title.position = "plot",
+            strip.background = element_blank(),
+            strip.text = element_text(size = 12))
+}
+```
+
+```{r}
+boxplot_treatment("WB")
+```
+
 
 
 ```{r thc across fluids, message=FALSE}
-
 ggplot(combined, aes(x = time_from_start, y = thc)) +
   geom_point(size = 1, color = "lightgreen") +
   facet_wrap(~ fluid_type, scales = "free_y") +
@@ -198,6 +250,10 @@ ggplot(combined, aes(x = time_from_start, y = thc)) +
     legend.position = "top"
   )
 ```
+
+## Analysis
+
+
 
 
 ```{r WB all dosages, message=FALSE}
@@ -225,7 +281,7 @@ ggplot(combined %>% filter(fluid_type == "WB" & time_from_start >= 0 & time_from
   geom_line() +
   geom_point(position = position_jitter(width = 0.2), size = 2) +  # Add jitter for better visibility
   labs(
-    title = "THC Levels Across Water Blood Over Time",
+    title = "THC Levels Across Whole Blood Over Time",
     x = "Time Interval",
     y = "THC Level",
     color = "Dosage"
@@ -244,7 +300,7 @@ ggplot(combined %>% filter(fluid_type == "WB" & time_from_start >= 0 & time_from
   geom_line() +
   geom_point(position = position_jitter(width = 0.2), size = 2) +  # Add jitter for better visibility
   labs(
-    title = "THC Levels Across Water Blood Over Time",
+    title = "THC Levels Across Whole Blood Over Time",
     x = "Time Interval",
     y = "THC Level",
     color = "Dosage"
@@ -264,7 +320,7 @@ ggplot(combined %>% filter(fluid_type == "WB" & time_from_start >= 0 & time_from
   geom_point(position = position_jitter(width = 0.2), size = 2) +
   facet_wrap(~treatment) +
   labs(
-    title = "THC Levels Across Water Blood Over Time",
+    title = "THC Levels Across Whole Blood Over Time",
     x = "Time Interval",
     y = "THC Level",
     color = "Dosage"
