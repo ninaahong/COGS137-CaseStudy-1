@@ -22,13 +22,14 @@ library(ggplot2)
 
 ## Introduction
 
-In this case study, we seek to determine the best biomarkers of recent THC use within a 3-hour period by evaluating compounds across three matrices: blood, oral fluid, and breath. Additionally, we aim to determine the optimal THC concentration cutoffs for each matrix within this timeframe and to examine how treatment groups may influence THC levels. This analysis is important given the legal implications of THC detection in impaired driving cases. Nineteen states have implemented per se or zero-tolerance laws for THC, with per se limits varying between 1-5 ng/mL THC in blood [^1]. These limits suggest significant regulatory interest in identifying reliable biological markers of recent cannabis use, particularly in roadside testing contexts.
+In this case study, we seek to determine the best bio-markers of recent THC use within a 3-hour period by evaluating compounds across three matrices: blood, oral fluid, and breath. Additionally, we aim to determine the optimal THC concentration cutoffs for each matrix within this timeframe and to examine how treatment groups may influence THC levels. This analysis is important given the legal implications of THC detection in impaired driving cases. Nineteen states have implemented per se or zero-tolerance laws for THC, with per se limits varying between 1-5 ng/mL THC in blood [^1]. These limits suggest significant regulatory interest in identifying reliable biological markers of recent cannabis use, particularly in roadside testing contexts.
 
-The study’s dataset includes three matrices–blood, oral fluid, and breath–with a total of 573 participants across them. Blood and oral fluid matrices allow detection of multiple THC-related compounds (8 in blood, 7 in oral fluid), while breath analysis focuses solely on one compound. Blood and oral fluid matrices have previously demonstrated relatively stable THC levels over time, providing a basis for exploring how they reflect THC concentrations within a 3-hour window [^2]. Breath testing, however, remains a newer field of investigation, and its reliability for THC detection within a short timeframe is still under review. Identifying the optimal biological matrix for THC detection in recent use is important for law enforcement to establish reliable, science-based standards for roadside impairment testing.
+The study’s data set includes three matrices–blood, oral fluid, and breath–with a total of 573 participants across them. Blood and oral fluid matrices allow detection of multiple THC-related compounds (8 in blood, 7 in oral fluid), while breath analysis focuses solely on one compound. Blood and oral fluid matrices have previously demonstrated relatively stable THC levels over time, providing a basis for exploring how they reflect THC concentrations within a 3-hour window [^2]. Breath testing, however, remains a newer field of investigation, and its reliability for THC detection within a short timeframe is still under review. Identifying the optimal biological matrix for THC detection in recent use is important for law enforcement to establish reliable, science-based standards for roadside impairment testing.
 
 The analysis also seeks to address the legal challenges posed by varying state regulations. For example, states like Colorado utilize a “reasonable inference” approach, where blood concentrations above 5 ng/ml THC suggest impairment [^3]. These differing legal standards show the importance of identifying clear, evidence-based cutoff values for THC detection across different matrices. In this case study, we aim to determine which matrix is most effective for detecting recent THC use within a 3-hour window and to identify the optimal cutoff values for each matrix. This analysis will help us understand how different matrices perform in detecting THC levels over time and provide insights into their potential effectiveness in practical settings.
 
 ## Questions
+
 1. Which matrix–blood, oral fluid, or breath–is most effective for detecting recent THC use within a 3-hour window?
 2. What is the optimal cutoff within this 3-hour timeframe for detecting THC in each matrix?
 3. How does the treatment group (Placebo, 5.9% THC, or 13.4% THC) affect the detection of recent THC use in each matrix?
@@ -51,7 +52,7 @@ OF <- read_csv("data/OF.csv")
 
 Now that we have our data properly imported, we need to wrangle our data in R before starting our analysis. 
 
-To begin our data wrangling, we imported the data as tables and modified the columns, transforming the data to improve its structure. There are three dataset tables for each fluid type, blood, oral, and breath, in which we reformatted the entries in the `Treatment` column for better readability. We also converted all column names to snake case to simplify future coding. We renamed the columns for all compounds in each dataset to ensure clear differentiation. Note that not every fluid type contains all of the compounds. To create time intervals, we turned the `time_from_start`column into hour intervals in `timepoint`.
+To begin our data wrangling, we imported the data as tables and modified the columns, transforming the data to improve its structure. There are three data set tables for each fluid type, blood, oral, and breath, in which we reformatted the entries in the `Treatment` column for better readability. We also converted all column names to snake case to simplify future coding. We renamed the columns for all compounds in each data set to ensure clear differentiation. Note that not every fluid type contains all of the compounds. To create time intervals, we turned the `time_from_start`column into hour intervals in `timepoint`.
 
 We start with the Whole Blood table.
 
@@ -110,7 +111,7 @@ BR <- BR |>
                                time_from_start > 180 ~ "181+ min"))
 ```
 
-After cleaning our data, we combined the three dataset tables into a single dataset and stored in a new csv.
+After cleaning our data, we combined the three dataset tables into a single data set and stored in a new csv.
 
 ```{r, message=FALSE}
 combined <- bind_rows(list(WB, OF, BR))
@@ -270,12 +271,9 @@ ggplot(combined %>% filter(fluid_type == "WB" & time_from_start >= 0 & time_from
 ```
 
 
-
-
 ## Results & Discussion 
 
 ## Conclusion
-
 
 
 [^1]: Pearson, J., et al. (2020). *Legal implications of THC per se limits.* Journal of Accident Analysis & Prevention. Retrieved from [Taylor & Francis Online](https://www.tandfonline.com/doi/full/10.1080/15389588.2020.1851685). 
