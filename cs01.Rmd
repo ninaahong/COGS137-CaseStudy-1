@@ -115,7 +115,7 @@ After cleaning our data, we combined the three dataset tables into a single data
 
 ```{r, message=FALSE}
 combined <- bind_rows(list(WB, OF, BR))
-write_csv(combined, "combined_data.csv")
+write_csv(combined, "data/combined_data.csv")
 ```
 
 ## Analysis
