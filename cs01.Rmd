@@ -37,7 +37,7 @@ The analysis also seeks to address the legal challenges posed by varying state r
 
 ## The Data
 
-The data set that we will be using for our case study is provided to us by Professor Ellis in our data/ folder. The data provided will be in the form of csv files.
+The data set that we will be using for our case study is provided to us by Professor Ellis in our `data/` folder. The data provided will be in the form of csv files.
 
 ### Data Import
 
@@ -48,6 +48,7 @@ WB <- read_csv("data/Blood.csv")
 BR <- read_csv("data/Breath.csv")
 OF <- read_csv("data/OF.csv")
 ```
+
 ### Data Wrangling
 
 Now that we have our data properly imported, we need to wrangle our data in R before starting our analysis. 
@@ -118,7 +119,9 @@ combined <- bind_rows(list(WB, OF, BR))
 write_csv(combined, "data/combined_data.csv")
 ```
 
-## Analysis
+## Exploratory Data Analysis (EDA)
+
+To get a broad view of compound level in our dataset, we visualized the distribution of each compound across all data points. To track changes over time, we plotted compound levels in each fluid type by time intervals, allowing us to observe trends in a
 
 ```{r compounds, message=FALSE}
 combined_long <- combined |> 
@@ -174,6 +177,8 @@ plot_scatter_time(matrix = "WB")
 plot_scatter_time(matrix = "OF")
 plot_scatter_time(matrix = "BR")
 ```
+
+## Analysis
 
 
 ```{r thc across fluids, message=FALSE}
@@ -233,6 +238,7 @@ ggplot(combined %>% filter(fluid_type == "WB" & time_from_start >= 0 & time_from
   )
 ```
 
+
 ```{r thc in wb, message=FALSE}
 ggplot(combined %>% filter(fluid_type == "WB" & time_from_start >= 0 & time_from_start <= 60), aes(x = time_from_start, y = thc, color = treatment, group = treatment)) +
   geom_line() +
@@ -250,6 +256,7 @@ ggplot(combined %>% filter(fluid_type == "WB" & time_from_start >= 0 & time_from
     legend.position = "bottom"
   )
 ```
+
 
 ```{r thc in wb 2, message=FALSE}
 ggplot(combined %>% filter(fluid_type == "WB" & time_from_start >= 0 & time_from_start <= 60), aes(x = time_from_start, y = thc, color = treatment, group = treatment)) +
@@ -271,7 +278,9 @@ ggplot(combined %>% filter(fluid_type == "WB" & time_from_start >= 0 & time_from
 ```
 
 
+
 ## Results & Discussion 
+
 
 ## Conclusion
 
