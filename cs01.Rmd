@@ -25,18 +25,17 @@ library(ggplot2)
 
 ## Introduction
 
-In this case study, we seek to determine the best bio-markers of recent THC use within a 3-hour period by evaluating compounds across three matrices: blood, oral fluid, and breath. Additionally, we aim to determine the optimal THC concentration cutoffs for each matrix within this timeframe and to examine how treatment groups may influence THC levels. This analysis is important given the legal implications of THC detection in impaired driving cases. Nineteen states have implemented per se or zero-tolerance laws for THC, with per se limits varying between 1-5 ng/mL THC in blood [^1]. These limits suggest significant regulatory interest in identifying reliable biological markers of recent cannabis use, particularly in roadside testing contexts.
+In this case study, we seek to determine the best bio-markers of recent THC use within a 3-hour period by evaluating compounds across three matrices: blood, oral fluid, and breath. Additionally, we aim to determine the optimal THC concentration cutoffs for each matrix within this time frame and to examine how treatment groups may influence THC levels. This analysis is important given the legal implications of THC detection in impaired driving cases. Nineteen states have implemented per se laws, or zero tolerance laws, for THC and with per se law limits varying between 1-5 ng/mL THC in blood [^1]. Our analysis revealed that within a 3-hour window, THC levels in whole blood often exceeded a threshold of 5 ng/mL, with the optimal detection cutoff ranging between 5-7 ng/mL for identifying recent use. This range aligns closely with the current legal standards in many states, supporting the use of a 5 ng/mL threshold in blood as an effective measure of recent THC exposure.
 
-The study’s data set includes three matrices–blood, oral fluid, and breath–with a total of 573 participants across them. Blood and oral fluid matrices allow detection of multiple THC-related compounds (8 in blood, 7 in oral fluid), while breath analysis focuses solely on one compound. Blood and oral fluid matrices have previously demonstrated relatively stable THC levels over time, providing a basis for exploring how they reflect THC concentrations within a 3-hour window [^2]. Breath testing, however, remains a newer field of investigation, and its reliability for THC detection within a short timeframe is still under review. Identifying the optimal biological matrix for THC detection in recent use is important for law enforcement to establish reliable, science-based standards for roadside impairment testing.
+The study’s data set includes three matrices–blood, oral fluid, and breath–with a total of 573 participants across them. Blood and oral fluid matrices allow detection of multiple THC-related compounds (8 in blood, 7 in oral fluid), while breath analysis focuses solely on one compound. Blood and oral fluid matrices have previously demonstrated relatively stable THC levels over time, providing a basis for exploring how they reflect THC concentrations within a 3-hour window [^2]. Breath testing, however, remains a newer field of investigation, and its reliability for THC detection within a short time frame is still under review. Identifying the optimal biological matrix for THC detection in recent use is important for law enforcement to establish reliable, science-based standards for roadside impairment testing.
 
-The analysis also seeks to address the legal challenges posed by varying state regulations. For example, states like Colorado utilize a “reasonable inference” approach, where blood concentrations above 5 ng/ml THC suggest impairment [^3]. These differing legal standards show the importance of identifying clear, evidence-based cutoff values for THC detection across different matrices. In this case study, we aim to determine which matrix is most effective for detecting recent THC use within a 3-hour window and to identify the optimal cutoff values for each matrix. This analysis will help us understand how different matrices perform in detecting THC levels over time and provide insights into their potential effectiveness in practical settings.
+The analysis also seeks to address the legal challenges posed by varying state regulations. For example, states like Colorado utilize a “reasonable inference” approach, where blood concentrations above 5 ng/ml THC suggest impairment [^3]. These differing legal standards show the importance of identifying clear, evidence-based cutoff values for THC detection across different matrices. In this case study, we aim to determine which matrix is most effective for detecting recent THC use within a 3-hour window and to identify the optimal cutoff values for each matrix. This analysis will help us understand how different matrices perform in detecting THC levels over time and provide insights into their potential effectiveness in detecting impairment.
 
 ## Questions
 
 1. Which matrix–blood, oral fluid, or breath–is most effective for detecting recent THC use within a 3-hour window?
-2. What is the optimal cutoff within this 3-hour timeframe for detecting THC in each matrix?
+2. What is the optimal cutoff within this 3-hour time frame for detecting THC in each matrix?
 3. How does the treatment group (Placebo, 5.9% THC, or 13.4% THC) affect the detection of recent THC use in each matrix?
-
 
 ## The Data
 
@@ -47,86 +46,110 @@ The data set that we will be using for our case study is provided to us by Profe
 In order to begin our analysis, we imported our raw data of whole blood, breath, and oral fluids from our data/ folder.
 
 ```{r, message=FALSE}
+# Import data for Whole Blood
 WB <- read_csv("data/Blood.csv")
+# Import data for Breath
 BR <- read_csv("data/Breath.csv")
+# Import data for Oral Fluid
 OF <- read_csv("data/OF.csv")
 ```
+
+In the Whole Blood file, we have 14 columns/variables: `ID`, `Treatment`, `Group`, `FLUID TYPE`, `Timepoint`, `CBN`, `CBD`, `THC`, `11-OH-THC`, `THC-COOH`, `THC-COOH-Gluc`, `CBG`, `THC-V`, and `time.from.start`.
+
+In the Breath file, we have 7 columns/variables: `ID`, `Treatment`, `Group`, `Fluid`, `Timepoint`, `THC (pg/pad)`, and `time.from.start`.
+
+In the Oral Fluid file, we have 13 columns/variables: `ID`, `Treatment`, `Group`, `Fluid`, `Timepoint`, `CBN`, `CBD`, `THC`, `11-OH-THC`, `CBG`, `THC-V`, `THCA-A`, and `time.from.start`.
 
 ### Data Wrangling
 
 Now that we have our data properly imported, we need to wrangle our data in R before starting our analysis. 
 
-To begin our data wrangling, we imported the data as tables and modified the columns, transforming the data to improve its structure. There are three data set tables for each fluid type, blood, oral, and breath, in which we reformatted the entries in the `Treatment` column for better readability. We also converted all column names to snake case to simplify future coding. We renamed the columns for all compounds in each data set to ensure clear differentiation. Note that not every fluid type contains all of the compounds. To create time intervals, we turned the `time_from_start`column into hour intervals in `timepoint`.
+There are three data set tables for each fluid type, blood, oral, and breath, in which we reformatted the entries in the `Treatment` column for better readability. We re-leveled the entries, so `Placebo` is the first level and acts like the baseline for our analyses. We also converted all column names to snake case to simplify future coding. We renamed the columns for all compounds in each data set to ensure clear differentiation. Note that not every fluid type contains all of the compounds. To create time intervals, we turned the `time_from_start`column into hour intervals and stored it into a new column, `timepoint`.
 
 We start with the Whole Blood table.
 
 ```{r, message=FALSE}
 WB <- WB |> 
+  # Re-code 'Treatment' variable for better readability
   mutate(Treatment = fct_recode(Treatment, 
-                                "5.9% THC (low dose)" = "5.90%",
-                                "13.4% THC (high dose)" = "13.40%"),
+                                "5.9% THC (low dose)" = "5.90%", # Re-code "5.90%" to "5.9% THC (low dose)"
+                                "13.4% THC (high dose)" = "13.40%"), # Re-code "13.40%" to "13.4% THC (high dose)"
+         # Re-level the 'Treatment' factor so that "Placebo" is the reference category
          Treatment = fct_relevel(Treatment, "Placebo", "5.9% THC (low dose)")) |> 
+  # Clean up column names to make them consistent; snake-case
   janitor::clean_names() |>
-  rename(thcoh = x11_oh_thc,
-         thccooh = thc_cooh,
-         thccooh_gluc = thc_cooh_gluc,
-         thcv = thc_v) |>
-  mutate(timepoint = case_when(time_from_start < 0 ~ "pre-smoking",
-                               time_from_start > 0 & time_from_start <= 60 ~ "0-60 min",
-                               time_from_start > 61 & time_from_start <= 120 ~ "0-120 min",
-                               time_from_start > 121 & time_from_start <= 180 ~ "0-180 min",
-                               time_from_start > 180 ~ "181+ min"))
+  # Rename columns to more meaningful names for easier analysis
+  rename(thcoh = x11_oh_thc, # Rename 'x11_oh_thc' to 'thcoh'
+         thccooh = thc_cooh, # Rename 'thc_cooh' to 'thccooh'
+         thccooh_gluc = thc_cooh_gluc, # Rename 'thc_cooh_gluc' to 'thccooh_gluc'
+         thcv = thc_v) |> # Rename 'thc_v' to 'thcv'
+  # Create a new 'timepoint' variable based on the 'time_from_start' variable
+  mutate(timepoint = case_when(time_from_start < 0 ~ "pre-smoking",  # If 'time_from_start' < 0, label as "pre-smoking"
+                               time_from_start > 0 & time_from_start <= 60 ~ "0-60 min", # If between 0 to 60 minutes, label as "0-60 min"
+                               time_from_start > 61 & time_from_start <= 120 ~ "0-120 min", # If between 61 to 120 minutes, label as "0-120 min"
+                               time_from_start > 121 & time_from_start <= 180 ~ "0-180 min", # If between 121 to 180 minutes, label as "0-180 min"
+                               time_from_start > 180 ~ "181+ min")) # If more than 180 minutes, label as "181+ min"
 ```
 
-Then, the Oral Fluid table.
+Then, the Breath table.
+
+```{r, message=FALSE}
+BR <- BR |>
+  # Re-code 'Treatment' variable for better readability
+  mutate(Treatment = fct_recode(Treatment, 
+                                "5.9% THC (low dose)" = "5.90%", # Re-code "5.90%" to "5.9% THC (low dose)"
+                                "13.4% THC (high dose)" = "13.40%"), # Re-code "13.40%" to "13.4% THC (high dose)"
+         # Re-level the 'Treatment' factor so that "Placebo" is the reference category
+         Treatment = fct_relevel(Treatment, "Placebo", "5.9% THC (low dose)")) |> 
+  # Clean up column names to make them consistent; snake-case
+  janitor::clean_names() |>
+  # Rename columns to more meaningful names for easier analysis
+  rename(thc = thc_pg_pad, # Rename 'thc_pg_pad' to 'thc'
+         fluid_type = fluid) |> # Rename 'fluid_type' to 'fluid'
+  # Create a new 'timepoint' variable based on the 'time_from_start' variable
+  mutate(timepoint = case_when(time_from_start < 0 ~ "pre-smoking", # If 'time_from_start' < 0, label as "pre-smoking"
+                               time_from_start > 0 & time_from_start <= 60 ~ "0-60 min", # If between 0 to 60 minutes, label as "0-60 min"
+                               time_from_start > 61 & time_from_start <= 120 ~ "0-120 min", # If between 61 to 120 minutes, label as "0-120 min"
+                               time_from_start > 121 & time_from_start <= 180 ~ "0-180 min", # If between 121 to 180 minutes, label as "0-180 min"
+                               time_from_start > 180 ~ "181+ min")) # If more than 180 minutes, label as "181+ min"
+```
+
+Last, but not least, the Oral Fluid table.
 
 ```{r, message=FALSE}
 OF <- OF |> 
+  # Re-code 'Treatment' variable for better readability
   mutate(Treatment = fct_recode(Treatment, 
-                                "5.9% THC (low dose)" = "5.90%",
-                                "13.4% THC (high dose)" = "13.40%"),
+                                "5.9% THC (low dose)" = "5.90%", # Re-code "5.90%" to "5.9% THC (low dose)"
+                                "13.4% THC (high dose)" = "13.40%"), # Re-code "13.40%" to "13.4% THC (high dose)"
+         # Re-level the 'Treatment' factor so that "Placebo" is the reference category
          Treatment = fct_relevel(Treatment, "Placebo", "5.9% THC (low dose)")) |> 
+  # Clean up column names to make them consistent; snake-case
   janitor::clean_names() |>
-  rename(thcoh = x11_oh_thc,
-         thcv = thc_v,
-         fluid_type = fluid) |>
-  mutate(timepoint = case_when(time_from_start < 0 ~ "pre-smoking",
-                               time_from_start > 0 & time_from_start <= 60 ~ "0-60 min",
-                               time_from_start > 61 & time_from_start <= 120 ~ "0-120 min",
-                               time_from_start > 121 & time_from_start <= 180 ~ "0-180 min",
-                               time_from_start > 180 ~ "181+ min"))
+  # Rename columns to more meaningful names for easier analysis
+  rename(thcoh = x11_oh_thc, # Rename 'x11_oh_thc' to 'thcoh'
+         thcv = thc_v, # Reanme 'thc_v' to 'thcv'
+         fluid_type = fluid) |> # Rename 'fluid_type' to 'fluid'
+  # Create a new 'timepoint' variable based on the 'time_from_start' variable
+  mutate(timepoint = case_when(time_from_start < 0 ~ "pre-smoking", # If 'time_from_start' < 0, label as "pre-smoking"
+                               time_from_start > 0 & time_from_start <= 60 ~ "0-60 min", # If between 0 to 60 minutes, label as "0-60 min"
+                               time_from_start > 61 & time_from_start <= 120 ~ "0-120 min", # If between 61 to 120 minutes, label as "0-120 min"
+                               time_from_start > 121 & time_from_start <= 180 ~ "0-180 min", # If between 121 to 180 minutes, label as "0-180 min"
+                               time_from_start > 180 ~ "181+ min")) # If more than 180 minutes, label as "181+ min"
 ```
 
-Last, but not least, the Breath table.
+After cleaning our data, we combined the three data set tables into a single data set and stored in a new csv.
 
 ```{r, message=FALSE}
-BR <- BR |> 
-  mutate(Treatment = fct_recode(Treatment, 
-                                "5.9% THC (low dose)" = "5.90%",
-                                "13.4% THC (high dose)" = "13.40%"),
-         Treatment = fct_relevel(Treatment, "Placebo", "5.9% THC (low dose)")) |> 
-  janitor::clean_names() |>
-  rename(thc = thc_pg_pad,
-         fluid_type = fluid) |>
-  mutate(timepoint = case_when(time_from_start < 0 ~ "pre-smoking",
-                               time_from_start > 0 & time_from_start <= 60 ~ "0-60 min",
-                               time_from_start > 61 & time_from_start <= 120 ~ "0-120 min",
-                               time_from_start > 121 & time_from_start <= 180 ~ "0-180 min",
-                               time_from_start > 180 ~ "181+ min"))
-```
-
-After cleaning our data, we combined the three dataset tables into a single data set and stored in a new csv.
-
-```{r, message=FALSE}
-combined <- bind_rows(list(WB, OF, BR))
-write_csv(combined, "data/combined_data.csv")
+combined <- bind_rows(list(WB, OF, BR)) # Combine the WB, OF, and BR data frames into one 
+write_csv(combined, "data/combined_data.csv") # Write the combined data set to a CSV file in the "data" folder
 ```
 
 ## Exploratory Data Analysis (EDA)
 
-To get a broad view of compound level in our dataset, we plotted compound levels over time within each fluid type to observe any changes and trends across different time intervals.
+To get a broad view of compound level in our data set, we plotted compound levels over time within each fluid type to observe any changes and trends across different time intervals.
 
-First we convert compound data to a long format for easier potting of concentration trends across time and compounds.
+First, we convert compound data to a long format for easier plotting of concentration trends across time and compounds.
 ```{r compounds, message=FALSE}
 combined_long <- combined |> 
   select(1:5,time_from_start,everything()) |>
@@ -134,7 +157,7 @@ combined_long <- combined |>
 
 ```
 
-Now that the data is in long format, we define a function to visualize compound concentration level over time for different fluid types. This function allows us to filter the data by a specific matrix (such as WB for whole blood, OF for oral fluid, or BR for breath) and pot scatter points of compound concentration (y-axis) against time from start (x-axis).
+Now that the data is in long format, we define a function to visualize compound concentration level over time for different fluid types. This function allows us to filter the data by a specific matrix (such as WB for whole blood, OF for oral fluid, or BR for breath) and plot scatter points of compound concentration (y-axis) against time from start (x-axis).
 ```{r, message=FALSE}
 plot_scatter_time <- function(matrix) {
   combined_long |> 
@@ -160,47 +183,26 @@ Our `plot_scatter_time` function to visualize compound concentration over time i
 plot_scatter_time(matrix = "WB")
 ```
 
-Each plot represents a different compound, with frequent users in green and occasional users in purple. THC levels peak shortly after the start time, particularly for frequent users, and then decline quickly. Other compounds, like THCCOOH and THCCOOH_Gluc, stay more stable over time. Overall, frequent users tend to have higher concentrations across compounds compared to occasional users.
+Each plot represents a different compound, with frequent users in green and occasional users in purple. THC levels peak shortly after the start time, particularly for frequent users, and then decline quickly. Other compounds, like `THCCOOH` and `THCCOOH_Gluc`, stay more stable over time. Overall, frequent users tend to have higher concentrations across compounds compared to occasional users.
 
 Next, we generate a similar plot for oral fluid (OF). This comparison will allow us to observe any unique patterns or differences in compound concentration across time interval to oral fluid samples.
 ```{r}
 plot_scatter_time(matrix = "OF")
 ```
 
-THC levels show a sharp increase near starting time, particularly for less experienced users, before decreasing. Compounds like THCA_A and CBG also peak briefly before leveling out. Unlike whole blood, oral fluid concentrations are generally lower and decrease more rapidly. Less experienced users tend to have higher peak levels across several compounds, indicating possible differences in compound metabolism between groups.
+THC levels show a sharp increase near starting time, particularly for less experienced users, before decreasing. Compounds like `THCA_A` and `CBG` also peak briefly before leveling out. Unlike whole blood, oral fluid concentrations are generally lower and decrease more rapidly. Less experienced users tend to have higher peak levels across several compounds, indicating possible differences in compound metabolism between groups.
 
 Finally, we produce the plot for compound concentrations overall time within the breath (BR) fluid type. 
 ```{r}
 plot_scatter_time(matrix = "BR")
 ```
 
-THC showed a sharp but short peak near the start time, especially for experienced users, and levels quickly returned to baseline. Most of the other compounds were barely detectable throughout the time period, suggesting minimal presence in the breath samples. The lack of change in compounds over time suggests that breath may be less effective at tracking these compounds compared to other matrices.
+THC showed a sharp but short peak near the start time, especially for experienced users, and levels out quickly returned to baseline. Most of the other compounds were barely detectable throughout the time period, suggesting minimal presence in the breath samples. The lack of change in compounds over time suggests that breath may be less effective at tracking these compounds compared to other matrices.
 
-
-
-From each compound, we have
-
-```{r thc across fluids, message=FALSE}
-ggplot(combined, aes(x = time_from_start, y = thc)) +
-  geom_point(size = 1, color = "lightgreen") +
-  facet_wrap(~ fluid_type, scales = "free_y") +
-
-  labs(
-    title = "THC Levels across Time in each Fluid Type",
-    x = "Time from Start (minutes)",
-    y = "Concentration (pg/mL)",
-  ) +
-  theme_minimal() +
-  theme(
-    plot.title = element_text(hjust = 0.5),
-    legend.position = "top"
-  )
-```
-
-We are categorizing THC levels into ranges to simplify the analysis and help identify where THC concentrations fall over time across different fluids. This approach will give us a clearer view of any trends in THC distribution, making it easier to compare patterns across fluid types and timepoints.
+We categorize THC levels into ranges to simplify the analysis and help identify where THC concentrations fall over time across different fluids. This approach will give us a clearer view of any trends in THC distribution, making it easier to compare patterns across fluid types and timepoints.
 ```{r}
 # Bin THC levels into specified ranges
-combined <- combined  |>
+bin_combined <- combined  |>
   filter(!is.na(thc), !is.na(timepoint)) |>
   mutate(
     thc_bin = cut(thc, breaks = c(0, 1, 2, 3, 4, 5, 6, 7, 8),
@@ -210,11 +212,11 @@ combined <- combined  |>
   filter(!is.na(thc_bin))
 
 # Count the number of THC levels in each bin, grouped by fluid_type and timepoint
-thc_counts <- combined  |>
+thc_counts <- bin_combined  |>
   group_by(fluid_type, timepoint, thc_bin) |>
   summarize(count = n(), .groups = 'drop')
 
-ggplot(combined , aes(x = thc_bin)) +
+ggplot(bin_combined, aes(x = thc_bin)) +
   geom_bar(aes(fill = timepoint), position = "stack", color = "black") +
   facet_wrap(~ fluid_type) +
   labs(title = "THC Level Distribution by Matrix and Timepoint",
@@ -228,9 +230,9 @@ ggplot(combined , aes(x = thc_bin)) +
 
 This visualization shows how THC levels are distributed across breath (BR), oral fluid (OF), and whole blood (WB) at different timepoints after smoking. Each color represents a time interval, with most samples showing lower THC concentrations.
 
-In whole bood, there are still measurable counts in higher THC ranges (5-6 ng/ml), which makes it more effective for detecting recent THC use compared to BR and OF. The WB data shows more spread in THC levels, capturing a range of concentrations over time.
+In Whole Blood, there are still measurable counts in higher THC ranges (5-6 ng/ml), which makes it more effective for detecting recent THC use compared to BR and OF. The WB data shows more spread in THC levels, capturing a range of concentrations over time.
 
-In contrast, BR and OF have the highest counts in the lowest range (0-1 ng/ml), especially at later timepoints, indicating a quicker decrease in detectable THC levels. The distribution across these matrcies highlights that WB is better suited for recent-use detection as it holds higher THC levels for longer periods than BR and OF.
+In contrast, BR and OF have the highest counts in the lowest range (0-1 ng/ml), especially at later timepoints, indicating a quicker decrease in detectable THC levels. The distribution across these matrices highlights that WB is better suited for recent-use detection as it holds higher THC levels for longer periods than BR and OF.
 
 Now, we create a boxplot to compare THC levels across treatments over specific time intervals for a selected fluid type. This will help us to observe how THC concentrations vary by treatment and over time.
 ```{r}
@@ -279,139 +281,134 @@ boxplot_treatment("WB")
 
 In the 0-60 minutes interval, both frequent and occasional users show a significant spike in THC levels. THC level are highest shortly after after consumption, with greater variability observed for frequent users compared to occasional users. At the 0-120 minute mark, THC levels remain measurable, especially in frequent users receiving the high dose. By the 0-180 minute interval, THC is still detectable, though the levels vary between users and doses. Frequent users generally have higher THC levels than occasional users across all timepoints, indicating that THC persists in their system after recent use. 
 
-## Analysis
-
-
-
-
+After analyzing THC levels by treatment for whole blood, it’s helpful to see how THC levels vary across different fluid types over time. This broader view will allow us to compare THC presence in various fluids and understand how each treatment affects detection across these different sample types.
 ```{r WB all dosages, message=FALSE}
 ggplot(combined, aes(x = timepoint, y = thc, color = treatment, group = treatment)) +
   geom_line() +
   geom_point(position = position_jitter(width = 0.2), size = 2) +  # Add jitter for better visibility
   facet_wrap(~ fluid_type, scales = "free_y") +  # Create separate plots for each fluid type
   labs(
-    title = "THC Levels Across Fluid Types Over Time",
+    title = "THC Levels Across Different Fluid Types Over Time by Treatment Group",
     x = "Time Interval",
     y = "THC Level",
     color = "Dosage"
   ) +
-  theme_minimal(base_size = 14) +  # Increase base font size for readability
+  scale_x_discrete(
+    limits = c("pre-smoking", "0-60 min", "0-120 min", "0-180 min", "181+ min")
+  ) +
+  theme_minimal(base_size = 10) +  # Increase base font size for readability
   theme(
-    plot.title = element_text(hjust = 0.5),
+    plot.title = element_text(size = 12, hjust = 0.5),
     axis.text.x = element_text(angle = 45, hjust = 1),  # Rotate x-axis labels for readability
     legend.position = "top"
   )
 ```
 
+In the 0-60 minute interval, THC levels peak significantly for both the low and high doses across all fluids, with the highest levels observed in breath and oral fluid. Breath shows the most dramatic spike, especially for the high dose, reaching a level substantially higher than in the other fluids. Oral fluid also shows high levels within the first 60 minutes but at a lower scale than breath. For whole blood (WB), the levels are much lower compared to breath and oral fluid, but THC is still detectable within the first 0-60 and 0-120 minute intervals. As time progresses beyond 180 minutes, THC levels decrease across all fluids, particularly in breath and oral fluid. Whole blood retains detectable THC levels for a longer period, indicating its reliability in identifying recent use over an extended time. This pattern suggests that WB is effective for confirming recent THC use, especially within the first three hours.
 
+
+## Analysis
+
+We focus on THC levels in whole blood samples taken within the first three hours after use, as this interval is commonly associated with recent use and captures a significant peak in THC concentration.
 ```{r WB of the first 3 hours, message=FALSE}
+# Filter data set to include only whole blood (WB) samples with time intervals between 0 and 180 minutes
 ggplot(combined %>% filter(fluid_type == "WB" & time_from_start >= 0 & time_from_start <= 180), aes(x = time_from_start, y = thc, color = treatment, group = treatment)) +
   geom_line() +
   geom_point(position = position_jitter(width = 0.2), size = 2) +  # Add jitter for better visibility
   labs(
-    title = "THC Levels Across Whole Blood Over Time",
+    title = "THC Levels Across Water Blood Over Time within 3 Hours by Treatment Group",
     x = "Time Interval",
     y = "THC Level",
     color = "Dosage"
   ) +
-  theme_minimal(base_size = 14) +  # Increase base font size for better readability
+  theme_minimal(base_size = 10) +  # Increase base font size for better readability
   theme(
-    plot.title = element_text(hjust = 0.5),
+    plot.title = element_text(size = 12, hjust = 0.5),
     axis.text.x = element_text(angle = 45, hjust = 1),  # Rotate x-axis labels
     legend.position = "bottom"
   )
 ```
 
+Between 25 and 50 minutes, there is a low amount of THC in all treatment groups, which drastically increases around 50 minutes, leading to peaks over the next 10 minutes before dropping again. The period between 50 and 100 minutes shows the densest concentration of THC levels for all participants, with even low-dosage participants showing elevated levels.
 
+1 Hour and most recent time periods will always have the most likely chance to be detected and is the most sensitive to the participant as shown from the first 20 minutes. However, due to the gap, it is also important to note that THC will be in the system longer even with moments where THC will drop, indicating that in situations where THC can be tested, it cannot be tested at a singular moment, but rather, in increments of 10 to 20 minutes to see changes of THC level has either increased or decreased. 
 ```{r thc in wb, message=FALSE}
+# Filter data set to include only whole blood (WB) samples with time intervals between 0 and 60 minutes but plot only in the range of 0-60 mins
 ggplot(combined %>% filter(fluid_type == "WB" & time_from_start >= 0 & time_from_start <= 60), aes(x = time_from_start, y = thc, color = treatment, group = treatment)) +
   geom_line() +
   geom_point(position = position_jitter(width = 0.2), size = 2) +  # Add jitter for better visibility
   labs(
-    title = "THC Levels Across Whole Blood Over Time",
+    title = "THC Levels Across Whole Blood Over Time within 1 Hours by Treatment Group",
     x = "Time Interval",
     y = "THC Level",
     color = "Dosage"
   ) +
-  theme_minimal(base_size = 14) +  # Increase base font size for better readability
+  theme_minimal(base_size = 10) +  # Increase base font size for better readability
   theme(
-    plot.title = element_text(hjust = 0.5),
+    plot.title = element_text(size = 12, hjust = 0.5),
     axis.text.x = element_text(angle = 45, hjust = 1),  # Rotate x-axis labels
     legend.position = "bottom"
   )
 ```
 
+THC Levels across 20 minutes to 50 minutes display a large gap in participant data recording, may indicate participant discrepancies (inability to record data during the time period, lack of THC changes during time period, experimenter’s lack of recording during time interval).
 
+For the one hour, we can see that participants who undertake low doses have higher peaks in the first 20 minutes and onto the past 50 minutes compared to high doses. In terms of WB concentration, we can infer that lower doses will be more effective in indicating recent THC use in the first 20 minutes, and between 50-60 minutes. This may indicate that with higher doses, it will be more difficult to indicate recent THC use, thus, it’s needed to wait longer than an hour to see if a higher dose is sustained longer in the system and if the intensity and physical effect has changed as well.
+
+After analyzing THC levels across Whole Blood over the first hour as a whole, we now focus on how these levels vary within each treatment group individually. This allows us to compare the patterns of THC presence over time for placebo, low dose, and high dose groups more clearly.
 ```{r thc in wb 2, message=FALSE}
+# Filter data set to only include whole blood samples with time intervals between 0 and 60 minutes but dividing it up into seperate treatment groups
 ggplot(combined %>% filter(fluid_type == "WB" & time_from_start >= 0 & time_from_start <= 60), aes(x = time_from_start, y = thc, color = treatment, group = treatment)) +
   geom_line() +
   geom_point(position = position_jitter(width = 0.2), size = 2) +
+  # Create a separate panel for each treatment type to compare THC levels within each treatment
   facet_wrap(~treatment) +
   labs(
-    title = "THC Levels Across Whole Blood Over Time",
+    title = "THC Levels Across Whole Blood Over Time by Treatment Group",
     x = "Time Interval",
     y = "THC Level",
     color = "Dosage"
   ) +
   theme_minimal(base_size = 14) +  # Increase base font size for better readability
   theme(
-    plot.title = element_text(hjust = 0.5),
+    plot.title = element_text(size = 12, hjust = 0.5),
     axis.text.x = element_text(angle = 45, hjust = 1),  # Rotate x-axis labels
     legend.position = "bottom"
   )
 ```
 
+In the placebo group, THC levels remain consistent at zero, indicating no recent THC use. In the 5.9% THC group, there is a sharp increase in THC levels shortly after use, with a peak within the first 20 minutes, followed by a rapid decrease. The 13.4% THC group also shows an initial surge in THC levels, but the concentrations appear similar to those in the 5.9% group. Both THC treatment groups demonstrate that recent THC use is most detectable within the first hour, with levels declining significantly afterward, suggesting reduced detectability beyond 60 minutes.
 
-```{r thc in of, message=FALSE}
-ggplot(combined %>% filter(fluid_type == "OF" & time_from_start >= 0 & time_from_start <= 60), aes(x = time_from_start, y = thc, color = treatment, group = treatment)) +
-  geom_line() +
-  geom_point(position = position_jitter(width = 0.2), size = 2) +
-  facet_wrap(~treatment) +
-  labs(
-    title = "THC Levels Across Oral Fluid Over Time",
-    x = "Time Interval",
-    y = "THC Level",
-    color = "Dosage"
-  ) +
-  theme_minimal(base_size = 14) +  # Increase base font size for better readability
-  theme(
-    plot.title = element_text(hjust = 0.5),
-    axis.text.x = element_text(angle = 45, hjust = 1),  # Rotate x-axis labels
-    legend.position = "bottom"
-  )
-```
 
-Specificity and Sensitivity
+#### Specificity and Sensitivity
 
-As we focus on THC as the main compound to our study for recent THC use, it would be best to explore the [bold] specificity [bold] pf THC as we want to be the most certain that using knowledge that they are either a frequent or occasional user, are within the time interval of one hour, and tested through WB, we are more likely to identify with high specificity if the individual has used in the past hour (less false positives).
+As we focus on THC as the main compound to our study for recent THC use, it would be best to explore the **specificity** pf THC as we want to be the most certain that using knowledge that they are either a frequent or occasional user, are within the time interval of one hour, and tested through WB, we are more likely to identify with high specificity if the individual has used in the past hour (less false positives).
 
-With respect to a study that found the highest accuracy of yielding 96% for a "molar metabolite ratio 1", the study had measured whole blood THC and metabolites in the time interval of 30 minutes "after starting a 15-minute interval" of cannabis intake, where they had found with THC alone the cut-point yielded "88% specificity, 73% sensitivity, and 80% accuracy" for identifying recent cannabis use. 
+With respect to a study that found the highest accuracy of yielding 96% for a "molar metabolite ratio 1", the study had measured Whole Blood THC and metabolites in the time interval of 30 minutes "after starting a 15-minute interval" of cannabis intake, where they had found with THC alone the cut-point yielded "88% specificity, 73% sensitivity, and 80% accuracy" for identifying recent cannabis use. 
 
 Within our study, we want to utilize the focus for specificity as we calculate our data to include the cutoff of similarly to their cut-point of 5.3 mu grams/L, which is 5.3 ng/mL. In the study, it has yielded around 75% specificity and sensitivity, so this will be our baseline with the data we have currently. As the data displays THC concentration of 
 
-Change Combined Data to include only "Frequent user" and "Occassional user" instead of "experienced" and "non-experienced"
+We change `combined_long` data set to include only "Frequent user" and "Occassional user" instead of "Experienced" and "Non-Experienced"
 ```{r}
 combined_user_long <- combined_long |>
   mutate(group = fct_recode(group, "Frequent user" = "Experienced user", "Occasional user" = "Not experienced user"))
 ```
 
-Range, Median, Mean of THC in Whole Blood
-
+We summarize the distribution of THC levels in the Whole Blood (WB) data set by calculating the range, median, and mean THC values.
 ```{r}
 wbthc_range <- range(WB$thc)
 wbthc_median <- median(WB$thc, na.rm = TRUE)
 wbthc_mean <- mean(WB$thc, na.rm = TRUE)
 
-WBTHC_summary <- list(
-  range = wbthc_range,
-  median = wbthc_median,
-  wbthc_mean
-)
-
-print(WBTHC_summary)
+cat("THC Level Summary in Whole Blood:\n")
+cat("Range:", wbthc_range[1], "to", wbthc_range[2], "\n")
+cat("Median:", wbthc_median, "\n")
+cat("Mean:", round(wbthc_mean, 2), "\n")
 ```
 
-Calculation Function for Specificity and Sensitivity
+The summary gives us a clear picture of THC levels in the data set, showing the minimum and maximum values, as well as typical values represented by the median and mean.
+
+We want to specify a cutoff level and a compound to analyze, and a specific timepoint, then calculate important metrics like sensitivity and specificity based on the cutoff threshold and whether the data is from a "pre-smoking" or post-exposure period.
 ```{r sens and spec}
 make_calculations <- function(dataset, cutoff, compound, timepoint_use){
   ## remove NAs
@@ -480,18 +477,6 @@ make_calculations <- function(dataset, cutoff, compound, timepoint_use){
 }
 ```
 
-Map for each matrix
-```{r}
-sens_spec_cpd <- function(dataset, cpd, timepoints){
-  args2 <- list(start = timepoints$start, 
-                stop = timepoints$stop, 
-                tpt_use = timepoints$timepoint)
-  out <- args2 |> 
-    pmap_dfr(make_calculations, dataset, compound = cpd)
-  return(out)
-}
-```
-
 Choosing the cutoffs for THC, we used 5 ng/mL as our baseline representation. 
 ```{r}
 # specify which calculations to make
@@ -513,7 +498,7 @@ WB_ss <- purrr::pmap_dfr(param_grid, ~ make_calculations(dataset=WB, cutoff = ..
 WB_ss
 ```
 
-Sensitivity and Specificity Plot
+We need to define a function to creates two visualizations for sensitivity and specificity across different time windows and detection limits.
 ```{r}
 plot_cutoffs <- function(dataset, timepoint_use_variable, tissue, cpd){
     # control colors and lines used in plots
@@ -583,7 +568,7 @@ plot_cutoffs <- function(dataset, timepoint_use_variable, tissue, cpd){
 }
 ```
 
-Whole Blood Content for THC Cutoff Plot Over Time
+Generate a plot showing the cutoffs for THC levels in blood across different time points in the dataset.
 ```{r}
 plot_cutoffs(dataset=WB_ss, 
              timepoint_use_variable=WB$timepoint, 
@@ -591,11 +576,10 @@ plot_cutoffs(dataset=WB_ss,
              cpd="thc")
 ```
 
-We can see that with our plot of specificity, 5 ng/mL and more of THC in blood yield over 90% in specificity and over  73% sensitivity to identify individuals who do not have any THC in the system, indicating that similar to prior research, there is validity to the concentration of 5.3 ng/mL for THC to be likely to be identifiable of THC and can provide decisions on when to exclude false positives of THC in system. With sensitivity, although high in the first hour, the time periods drop directly after to lower than 25% sensitvity after 3 hours, so we want to note for future concentrations that have an increase dose of 5 ng/mL may opt for higher sensitivity. 
+We can see that with our plot of specificity, 5 ng/mL and more of THC in blood yield over 90% in specificity and over 73% sensitivity to identify individuals who do not have any THC in the system, indicating that similar to prior research, there is validity to the concentration of 5.3 ng/mL for THC to be likely to be identifiable of THC and can provide decisions on when to exclude false positives of THC in system [^4]. With sensitivity, although high in the first hour, the time periods drop directly after to lower than 25% sensitivity after 3 hours, so we want to note for future concentrations that have an increase dose of 5 ng/mL may opt for higher sensitivity. 
 
 Now, to compare with other matrix's to see if THC has a higher sensitivity and specificity compared to Oral Fluid and Breath. 
 
-### Oral Fluid
 ```{r}
 # specify which calculations to make
 cutoffs <- c(0.5, 1, 5, 7.5, 10)
@@ -621,9 +605,9 @@ plot_cutoffs(dataset=OF_ss,
              tissue="Oral Fluid", 
              cpd="thc")
 ```
-When looking at Oral Fluid, we can see that for 5 ng/mL, the trend of high sensitivity and specificity continues as for the presmoking period in specificity and for the first hour for both all yield high percentages, indicating that oral fluid also contributes to having a high likelihood to detect THC even in small amounts. However, although sensitivity is higher for all concentrations in the first hour, there is a large falloff in the first hour, distinctly in detection of false positives in specificity for lower doses within the hour interval, which does not yield more accurate results compared to whole blood.
 
-### Breath Level
+When looking at Oral Fluid, we can see that for 5 ng/mL, the trend of high sensitivity and specificity continues as for the presmoking period in specificity and for the first hour for both all yield high percentages, indicating that oral fluid also contributes to having a high likelihood to detect THC even in small amounts. However, although sensitivity is higher for all concentrations in the first hour, there is a large falloff in the first hour, distinctly in detection of false positives in specificity for lower doses within the hour interval, which does not yield more accurate results compared to Whole Blood.
+
 ```{r}
 # specify which calculations to make
 cutoffs <- c(0.5, 1, 5, 7.5, 10)
@@ -649,6 +633,7 @@ plot_cutoffs(dataset=BR_ss,
              tissue="Breath", 
              cpd="thc")
 ```
+
 Compared to the Whole Blood and Oral Fluid, Breath seems to be only applicable for higher detection limits, which in this case is 10 ng/mL. And since we have already found that 5 ng/mL is already accurate in detecting with high specificity and sensitivity and we would like the lower dosage possible for detection, we can assess that the breath matrix is unnecessary for our study and has use for larger doses in the first three hours.
 
 ```{r}
@@ -676,28 +661,26 @@ plot_cutoffs(dataset=WB_new_ss,
              tissue="Blood", 
              cpd="thc")
 ```
-In context for cutoffs between 5 ng/mL -7 ng/mL, it has shown that higher detection limits do often become less sensitive to accuracy overtime, leading to a drop in likelihood to identify if THC has been recently used. The cutoffs in the middle have the most likelihood to be optimal in detecting THC in Blood that would be less sensitive to small traces of THC in the system that may not be causal for impairment, but is more likely to pick up a concentration of THC metabolites that is sustained in Blood for longer overtime.
+
+In context for cutoffs between 5 ng/mL-7 ng/mL, it has shown that higher detection limits do often become less sensitive to accuracy overtime, leading to a drop in likelihood to identify if THC has been recently used. The cutoffs in the middle have the most likelihood to be optimal in detecting THC in Blood that would be less sensitive to small traces of THC in the system that may not be causal for impairment, but is more likely to pick up a concentration of THC metabolites that is sustained in Blood for longer overtime.
 
 
 ## Results & Discussion 
+We have found that within our analysis when initializing THC as a our main compound between all matrices and dosages, we were able to conclude that Blood content matrix is the most effective for detection of recent THC use compared to Oral Fluid and Breath for the detection cutoff between 5ng/mL to 6ng/mL. This detection cutoff is supported by WB content having an increased frequency of all compounds and specifically THC concentration compared to other matrices, which are consistent with an increased THC detection overtime. Although this biomarker within the first three hour time interval has the highest likelihood to provide indication of THC use on a general scale, there is some additional discussion needed to determine optimal detection based on dosage, individual THC use, and compound ratios. 
 
-The context of our question focuses on 
-1. Which matrix–blood, oral fluid, or breath–is most effective for detecting recent THC use within a 3-hour window?
-2. What is the optimal cutoff within this 3-hour timeframe for detecting THC in each matrix?
-3. How does the treatment group (Placebo, 5.9% THC, or 13.4% THC) affect the detection of recent THC use in each matrix?
+Other variables in the data such as treatment group also had contributions in our data that provides support for Blood content as the most effective, as the third visualization of “THC Levels Across Fluid Types Over Time” compared to doses of Placebo, Low dose (5.9%), and high dose (13.4%), there was an increased frequency of points for Low Dose with higher peaks for 1 hour, 2 hour, and 3 hour. Although it may be believed that high doses would have an increased THC level in Blood, there may be indication of users taking more doses than normal in the same time period, leading to an increase of THC concentration level that may have affected our findings of THC detection. Additionally, when visualizing the time intervals of one hour to three hours, there is a large gap between points in time for the interval of 20 to 50, where many points fall to 0 or very low levels of THC, which for the 3 hour timeframe, can decrease early detection or create false negatives if not detected with higher cutoffs. 
 
-
-
-
-
+One variable we were unable to implement in our data was whether the individual was a frequent user or an occasional user of marijuana. We decided to opt this information out to provide a more general detection cutoff for any individual who is tested, regardless of previous use. This generalization of users as uniform data would help reach a baseline limit that within the time frame of three hours, one can be tested for the minimum requirement for recent THC use so THC is not sustained overtime. However, from previous research and initial findings, the concentration in frequent users does surpass occasional users from data of THC levels during pre-smoking time intervals and increased peaks that would correlate with low dosage and high dosage due to tolerance (less psychoactive effect), withdrawal (increased dependence of psychoactive effect), or sensitivity (increased psychoactive effect). In future studies that look at intervals longer than three hours, we will account for individual THC use that would provide more implementation of determining what interval an individual has taken THC based on its effect.
 
 ## Conclusion
+
+The visual inferences we have connected from THC concentration overtime between all matrices of Blood, Oral Fluid, and Breath, we conclude that when testing in a three hour time period, the detection cutoff for recent THC use is 5 to 7 ng/mL in Blood content. Although we are unable to propose if this cutoff is statistically significant to impairment and psychoactivity in THC and other compounds, there is a higher consistency of participant data points and longer sustainability of THC across the three hour interval compared to the OF and BR matrix. Additionally, a linear specificity at a high percentage decreases the chances of false identification of THC in the system. We propose this biomarker and the stride for reliable tests to combat preconceptions of drug testing methods that intimidate or impede on individuals who use marijuana, especially with ongoing measures for recreational and medical use in the state legislature. By providing an early detection cutoff that is accurate in identifying THC presence on-site and avoiding false-positive results in the first three hours, we hope to yield a higher chance for individuals to be correctly diagnosed with THC in their system and can be tested for impairment later on, regardless of their present state or feeling. We hope in future studies that this baseline cutoff can be improved upon to include other compounds like non-psychoactives and metabolite ratios with THC that will yield more accurate detection of THC in system, and change the cutoff to be more correspondent to experienced users and the varying amounts of dose for THC. Creating consistency and reliability measures in testing that enforces a base standard that is set for everyone testing, regardless of how frequent or experienced a user is, establishes principle and ethical criterion that does not judge, but rather, interpret the THC presence as an application of the individual itself. 
 
 
 [^1]: Pearson, J., et al. (2020). *Legal implications of THC per se limits.* Journal of Accident Analysis & Prevention. Retrieved from [Taylor & Francis Online](https://www.tandfonline.com/doi/full/10.1080/15389588.2020.1851685). 
 
-[^2]: Huestis, M. A. (2007). *Human cannabinoid pharmacokinetics.* Chemistry & Biodiversity, 4(8), 1770-1804. [https://pmc.ncbi.nlm.nih.gov/articles/PMC2689518/). 
+[^2]: Huestis, M. A. (2007). *Human cannabinoid pharmacokinetics.* Chemistry & Biodiversity, 4(8), 1770-1804. Retrieved from [National Library of Medicine](https://pmc.ncbi.nlm.nih.gov/articles/PMC2689518/). 
 
 [^3]: Compton, R. (2017). *Marijuana-impaired driving: A report to Congress.* National Highway Traffic Safety Administration. Retrieved from [NGTSA](https://www.nhtsa.gov/sites/nhtsa.gov/files/documents/812440-marijuana-impaired-driving-report-to-congress.pdf).
 
-[^4] Kosnett, M. J., Ma, M., Dooley, G., Wang, G. S., Friedman, K., Brown, T., Henthorn, T. K., & Brooks-Russell, A. (2023). Blood cannabinoid molar metabolite ratios are superior to blood THC as an indicator of recent cannabis smoking. Clinical Toxicology, 61(5), 355–362. https://doi.org/10.1080/15563650.2023.2214697 
+[^4]: Kosnett, M. J., Ma, M., Dooley, G., Wang, G. S., Friedman, K., Brown, T., Henthorn, T. K., & Brooks-Russell, A. (2023). *Blood cannabinoid molar metabolite ratios are superior to blood THC as an indicator of recent cannabis smoking.* Clinical Toxicology, 61(5), 355–362. Retrieved from [Taylor & Francis Online](https://doi.org/10.1080/15563650.2023.2214697).
